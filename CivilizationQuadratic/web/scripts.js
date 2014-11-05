@@ -82,6 +82,9 @@ $(function(){
      // remove big title
      $('.main_content').children('h1').remove();
 
+     // remove designer floater
+     $('.mastfoot').hide();
+
      // css
      // Bootstrap Core CSS - Uses Bootswatch Flatly Theme: http://bootswatch.com/flatly/
      loadjscssfile("http://oitistang.github.io/CivilizationQuadratic/web/css/bootstrap.min.css", "css");
