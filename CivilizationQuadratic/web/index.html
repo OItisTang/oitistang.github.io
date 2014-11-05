@@ -34,6 +34,17 @@
         <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
 
+    <script type="text/javascript">
+    function show_cn() {
+        $('.cn').show(); $('.en').hide();
+        document.title = '“文明二次方” -- 万物沟通与协作';
+    }
+    function show_en() {
+        $('.cn').hide(); $('.en').show();
+        document.title = '"Civilization Quadratic" -- Massive Communication and Cooperation';
+    }
+    </script>
+
 </head>
 
 <body class="index">
@@ -41,7 +52,7 @@
 <!-- ===================================================== menu begin ===================================================== -->
 
     <!-- Navigation -->
-    <nav class="navbar navbar-default navbar-fixed-top">
+    <nav id="my-navbar" class="navbar navbar-default navbar-fixed-top">
         <div class="container">
             <!-- Brand and toggle get grouped for better mobile display -->
             <div class="navbar-header page-scroll">
@@ -51,7 +62,8 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="#page-top">文明二次方</a>
+                <a class="navbar-brand cn" href="#page-top">文明二次方</a>
+                <a class="navbar-brand en" href="#page-top"  style="font-size: 20px; display: none;">Civilization Quadratic</a>
             </div>
 
             <!-- Collect the nav links, forms, and other content for toggling -->
@@ -61,31 +73,62 @@
                         <a href="#page-top"></a>
                     </li>
                     <li class="page-scroll">
-                        <a href="#summary">摘要</a>
+                        <a href="#summary">
+                            <div class="cn">摘要</div>
+                            <div class="en" style="font-size: 12px; display: none;">Summary</div>
+                        </a>
                     </li>
                     <li class="page-scroll">
-                        <a href="#concept">概念</a>
+                        <a href="#concept">
+                            <div class="cn">概念</div>
+                            <div class="en" style="font-size: 12px; display: none;">Concept</div>
+                        </a>
                     </li>
                     <li class="page-scroll">
-                        <a href="#universa">宇言</a>
+                        <a href="#universa">
+                            <div class="cn">宇言</div>
+                            <div class="en" style="font-size: 12px; display: none;">Universa</div>
+                        </a>
                     </li>
                     <li class="page-scroll">
-                        <a href="#protocol">协议</a>
+                        <a href="#protocol">
+                            <div class="cn">协议</div>
+                            <div class="en" style="font-size: 12px; display: none;">Protocol</div>
+                        </a>
                     </li>
                     <li class="page-scroll">
-                        <a href="#cloud">Cloud</a>
+                        <a href="#cloud">
+                            <div class="cn">Cloud</div>
+                            <div class="en" style="font-size: 12px; display: none;">Cloud</div>
+                        </a>
                     </li>
                     <li class="page-scroll">
-                        <a href="#demo">演示</a>
+                        <a href="#demo">
+                            <div class="cn">演示</div>
+                            <div class="en" style="font-size: 12px; display: none;">Demo</div>
+                        </a>
                     </li>
                     <li class="page-scroll">
-                        <a href="#vision">应用前景</a>
+                        <a href="#vision">
+                            <div class="cn">应用前景</div>
+                            <div class="en" style="font-size: 12px; display: none;">Vision</div>
+                        </a>
                     </li>
                     <li class="page-scroll">
-                        <a href="#opportunity-challenge">机遇与挑战</a>
+                        <a href="#opportunity-challenge">
+                            <div class="cn">机遇与挑战</div>
+                            <div class="en" style="font-size: 12px; display: none;">Op &amp; Ch</div>
+                        </a>
                     </li>
                     <li class="page-scroll">
-                        <a href="#us">我们</a>
+                        <a href="#us">
+                            <div class="cn">我们</div>
+                            <div class="en" style="font-size: 12px; display: none;">Us</div>
+                        </a>
+                    </li>
+                    <li class="page-scroll">
+                        <a href="#" class="cn" onclick="show_en()">English</a>
+                        <a href="#" class="en" onclick="show_cn()" style="font-size: 12px; display: none;">中文</a>
                     </li>
                 </ul>
             </div>
@@ -104,10 +147,15 @@
             <div class="row">
                 <div class="col-lg-12">
                     <img class="img-responsive" src="http://oitistang.github.io/CivilizationQuadratic/images/CivilizationQuadratic.jpg" width="600" alt="">
-                    <div class="intro-text">
+                    <div class="intro-text cn">
                         <span class="name">文明二次方</span>
                         <hr class="star-light">
                         <span class="skills">万物沟通与协作</span>
+                    </div>
+                    <div class="intro-text en" style="display: none;">
+                        <span class="name">Civilization Quadratic</span>
+                        <hr class="star-light">
+                        <span class="skills">Massive Communication and Cooperation</span>
                     </div>
                 </div>
             </div>
@@ -121,12 +169,13 @@
         <div class="container">
             <div class="row">
                 <div class="col-lg-12 text-center">
-                    <h2>摘要</h2>
+                    <h2 class="cn">摘要</h2>
+                    <h2 class="en" style="display: none;">Summary</h2>
                     <hr class="star-primary">
                 </div>
             </div>
             <div class="row">
-                <div class="col-lg-8 col-lg-offset-2">
+                <div id="summary-body-cn" class="col-lg-8 col-lg-offset-2 cn">
 <div>随着Internet of Everything(IoE)的发展，那99.4%的事物将逐渐接入Internet中。</div>
 <div>当所有人和事物相互连接、沟通、合作，人们将和周围的世界更加融为一体，</div>
 <div>无数需求将被满足，无数可能将得以创造。</div>
@@ -142,6 +191,22 @@
 <div>Universa利用云计算，推动着IoE和“雾计算”，<br></div>
 <div>为这个新文明推波助澜。</div>
                 </div>
+                <div id="summary-body-en" class="col-lg-8 col-lg-offset-2 en" style="display: none;">
+<div>With the development of Internet of Everything(IoE), those 99.4% unconnected things will finally be connected into the Internet.</div>
+<div>When all people and things are mutually connected, communicate and cooperate, people and the world around us will be a more harmonious entirety,</div>
+<div>countless needs will be fulfiled, infinite possibilites will be created.</div>
+<div>The civilization between human and all things will born.</div>
+<div><br></div>
+<div>To make people and anything to communicate and cooperate, an unified language should be invented,</div>
+<div>it should make any people and anything to have a unified interface through a unified protocol,</div>
+<div>it should also provide a mighty computing power and cooperating platform.</div>
+<div><br></div>
+<div>To make this happen, we created Universa,</div>
+<div>it is a protocol for anything to talk with each other, so that communication and cooperation can happen,</div>
+<div>it also is an infrastructure, computing framework and application platform,</div>
+<div>Universa utilizes Cloud Computing to drive IoE and Fog Computing,</div>
+<div>it push forwards the new civilization.</div>
+                </div>
             </div>
         </div>
     </section>
@@ -151,12 +216,13 @@
         <div class="container">
             <div class="row">
                 <div class="col-lg-12 text-center">
-                    <h2>“文明二次方”：全新的文明，统一的世界</h2>
+                    <h2 class="cn">“文明二次方”：全新的文明，统一的世界</h2>
+                    <h2 class="en" style="display: none;">"Civilization Quadratic": New Civilization, Unified World</h2>
                     <hr class="star-light">
                 </div>
             </div>
             <div class="row">
-                <div class="col-lg-8 col-lg-offset-2">
+                <div id="concept-body-cn" class="col-lg-8 col-lg-offset-2 cn">
 <div>当人和人开始交谈，我们变得更懂对方，</div>
 <div>我们创造了人类文明。</div>
 <div><br></div>
@@ -177,12 +243,39 @@
 <div>它连接一切人和事物，并为每个人和事物提供统一呈现(由属性、事件、方法组成)，</div>
 <div>我们可以对此进行编程、创建应用，从而满足无数需求和创造无限可能！</div>
 <div>我们称之为“宇言”(Universa)。</div>
-
 <div><br></div>
 <div>在文明二次方中，一切事物和人一样都有生命，</div>
 <div>我们交谈、合作、并存，</div>
 <div>我们创造着无限的可能，</div>
 <div>我们推动着新的文明！</div>
+                </div>
+                <div id="concept-body-en" class="col-lg-8 col-lg-offset-2 en" style="display: none;">
+<div>When people talk to each other, we start to better understand each other,</div>
+<div>so we created human civilization.</div>
+<div><br></div>
+<div>When people start to talk to anything around them,</div>
+<div>we begin to better understand the world around us, the world around us also becomes to understand us more,</div>
+<div>this should be a new civilization between human beings and all the other things,</div>
+<div>our compabilities of perception and manipulation will gain improvements exponentially,<br></div>
+<div>so we call this "Civilization Quadratic"!</div>
+<div><br></div>
+<div>Human civilization is inherited and progressed with the form of language through characters as carrier.</div>
+<div>Now, we will use IoE as carrier,</div>
+<div>and provide a "language" for people and everything to mutually communicate,</div>
+<div>so that the cooperation between anything can be possible,</div>
+<div>finally, the new civilization, "Civilization Quadratic", can be created and advanced.</div>
+<div><br></div>
+<div>This "language" should be a unified protocol which makes people and anything to have a unified interface,</div>
+<div>so that high efficiency communication can happen between people and things, things and things, also people and people.</div>
+<div>This "languate" should be a powerful infrastructure, computing framework and application platform,</div>
+<div>it connects all people and things, it also provide a presence (consists of properties, events, functions) for each people and thing,</div>
+<div>it allows us to program and create applications against thoses presences to fulfil countless needs and create infinite possibilities!</div>
+<div>We call it "Universa".</div>
+<div><br></div>
+<div>In Civilization Quadratic, anything are like people do have lives,</div>
+<div>we talk, cooperate, coexist,</div>
+<div>we create infinite possibilites,</div>
+<div>we push forward the new civilization!</div>
                 </div>
             </div>
         </div>
@@ -195,12 +288,13 @@
         <div class="container">
             <div class="row">
                 <div class="col-lg-12 text-center">
-                    <h2>“宇言”：使万物沟通与协作，创无限可能</h2>
+                    <h2 class="cn">“宇言”：使万物沟通与协作，创无限可能</h2>
+                    <h2 class="en" style="display: none;">"Universa": Make Everything to Communicate and Cooperate, Create Infinite Possibilities</h2>
                     <hr class="star-primary">
                 </div>
             </div>
             <div class="row">
-                <div class="col-lg-8 col-lg-offset-2">
+                <div id="universa-body-cn" class="col-lg-8 col-lg-offset-2 cn">
 <div>“宇言”，即Universa，由两部分组成：</div>
 <ol><li>The Universa Language：它是一个通信协议，规范万物都具有统一接口，从而万物可以相互沟通，使得万物间协作成为可能。</li><li>The Universa Cloud：它是对The Universa Language协议的云端部分具体实现。<br>
 它作为通信基础设施为万物提供沟通通路；<br>
@@ -221,6 +315,30 @@
 Cloud会自动和事物沟通，把它连接上来，并为其创建呈现，这样的呈现将包含属性、事件、方法。</li><li>我们对事物的属性、事件、方法进行编程，创建应用程序，Cloud为我们执行，从而实现事物间协作。</li><li>Universa不是独立的个体，它利用现有互联网优势实现自己，同时用自己的功能来扩展互联网。<br>
 它为事物创建RESTful的呈现和API，我们可以把它分享到Internet，并和现有Internet应用协作和融合。</li></ol>
                 </div>
+                <div id="universa-body-en" class="col-lg-8 col-lg-offset-2 en" style="display: none;">
+<div>"Universa", mainly consists of two parts:</div>
+<ol><li>The Universa Language: It is a communication protocol which normalize all things to have a unified interface, then things can communicate with each other, cooperation between things can be possible.</li><li>The Universa Cloud: It is the cloud part implementation of The Universa Language protocol.<br>
+It acts as the communication infrastructure that provides the means for communication between everything;<br>
+It acts as the computing framework that creates unified presences according to the protocol for all things connected to the cloud, the presence consists of properties, events and functions, it creates a programming and computing environment based on them;<br>
+It acts as the application platform that allows us to create applications upon the unified interfaces, and executes those applications for us.</li></ol>
+<div>With the help of "Universa", everything can communicate with each other, cooperation becomes possible. The count of things in the world is huge, any two things can make communications and cooperations, so possibilities are increased exponentially.</div>
+<div>Infinite possibilities creates new civilization, and this kind of civilization is not a simple improvement of current civilization, it's the quadratic of civilization.</div>
+
+<div><br></div>
+<div>For the concept and interacting model, please refer to following video for an intuitive congnition.</div>
+<div><iframe src="//player.vimeo.com/video/110774733?byline=0&amp;portrait=0" width="800" height="604" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe></div>
+
+<div><br></div>
+<div>The typical application flow is:</div>
+<ol><li>To make everything be able to communicate, we need to develop hardwares or softwares according to The Universa Languate protocol,<br>
+certainly, we can also tansform existing hardwares and softwares to conform to the protocol.<br>
+The protocol does not discriminate hardwares from softwares, anything that applies to the protocol is a communicatable thing.</li>
+<li>Login to The Universa Cloud, tell the cloud the necessary information (eg. IP, password) for connecting a thing,<br>
+Cloud will automatically communicate with the thing and connect it to the cloud, it also creates a presence for the thing which includes properties, events and functions.</li>
+<li>We program against the properties, events and functions of things so that applications are created, Cloud will execute them for us, by this means, cooperation between things are implemented.</li>
+<li>Universa is not an isolated entity, it utilizes the advantages of the Internet to implement itself, at the same time expands the functionalities of the Internet with its own features.<br>
+It implements RESTful APIs for the presences of things which we can share to the Internet and make them to cooperate and fuse with existing Internet applications.</li></ol>
+                </div>
             </div>
         </div>
     </section>
@@ -230,12 +348,180 @@ Cloud会自动和事物沟通，把它连接上来，并为其创建呈现，这
         <div class="container">
             <div class="row">
                 <div class="col-lg-12 text-center">
-                    <h2>The Universa Language：万物沟通的协议</h2>
+                    <h2 class="cn">The Universa Language：万物沟通的协议</h2>
+                    <h2 class="en" style="display: none;">The Universa Language: The Protocol for Everyting to Communicate</h2>
                     <hr class="star-light">
                 </div>
             </div>
             <div class="row">
-                <div class="col-lg-8 col-lg-offset-2">
+                <div id="protocol-body-cn" class="col-lg-8 col-lg-offset-2 cn">
+<div>The Universa Language协议（简称“宇言”协议），</div>
+<div>是一种交互规范，它要求所有事物都具有统一接口。</div>
+<div>是一种语义协议，它定义交互的流程与交互内容的语法格式。</div>
+<div><br></div>
+<div>所有符合“宇言”协议的事物都将成为一个具有统一接口的对象，</div>
+
+<div>“宇言”协议将万物的状态、行为和能力分别抽象成属性、事件和方法。</div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/Object.jpg" alt="" width="432"></div></div>
+
+<div>随着科技的发展，我们每个人都随身携带一个或多个智能设备，如iPhone、智能手环等。这些设备作为一个代理早就把我们变成Internet中的一部分。</div>
+<div>因此这些设备可以进一步为我们人实现属性、事件和方法，从而我们人除了作为人类存在以外，同时在另一个角度也变成了符合“宇言”协议的事物。</div>
+
+<div><br></div>
+<div>因此，所有这些事物，包括人，可以通过触发应用程序，再由应用程序执行其他事物的方法，从而实现万物协作。</div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/Collaboration.jpg" alt="" width="533"></div><br></div>
+
+<div><br></div>
+<div><u><b>“宇言”协议的典型交互流程：</b></u></div>
+<div><b>1、将事物连接到The Universa Cloud</b></div>
+<div>我们告诉Cloud连接事物的必要信息（如IP、密码等），Cloud会请求连接事物，</div>
+<div>事物回复一份自我描述给Cloud，</div>
+<div>Cloud以此为事物创建呈现，这样的呈现将包含属性、事件、方法。</div>
+
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/1.%20Add%20Thing.png" alt="" width="674"></div></div>
+
+<div><b>2、事件处理</b></div>
+<div>当事物内部状态发生变迁，它会发送一个事件给Cloud，</div>
+<div>Cloud根据事物的呈现来判定如何处理这个事件。</div>
+<div>比如可以用事件所包含的值来更新这个事件的某一个属性值。</div>
+<div>该事件还可以作为执行其他任务的触发条件。</div>
+
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/2.%20Event.png" alt="" width="674"></div></div>
+
+<div><b>3、读取事物的属性值</b></div>
+<div>当我们想去读取事物的某个属性值时，</div>
+<div>Cloud会帮助我们查询这个事物的呈现，</div>
+<div>并从中获取最新的值返回给我们，而无需去直接跟事物获取。</div>
+<div>这样的好处是，Cloud为事物本身屏蔽了访问压力，如果事物本身能力较弱，它根本不用担心因负载过大而宕机。</div>
+
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/3.%20Read%20Property.png" alt="" width="676"></div></div>
+
+<div><b>4、执行方法</b></div>
+<div>当我们想执行事物的某个方法时，</div>
+<div>Cloud会查询该事物的呈现，并以此要求我们输入所需的参数，</div>
+<div>为我们发送一条执行方法的请求报文，</div>
+<div>事物接到该报文后执行相应动作，并返回一定的值给Cloud告知成功与否。</div>
+
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/4.%20Function%20Call.png" alt="" width="672"></div></div>
+
+<div><b>5、事物通过应用程序进行协作</b></div>
+<div>如前所述，Universa是一个协作平台，我们可以对事物的属性、事件、方法编写一个应用程序并保存于Cloud。</div>
+<div>该应用程序可以声明某一个事物发来的某一个事件满足什么样的条件时，该应用程序得以运行，它可以去执行另一个事物的一个方法。</div>
+<div>触发条件可以是多个，执行的动作也可以是多个。</div>
+
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/5.%20Application%20%26%20Collaboration.png" alt="" width="672"></div></div>
+
+<div><br></div>
+<div><u><b>“宇言”协议的语法格式：</b></u><br></div>
+<div><b>1、“连接”报文</b></div>
+<div>当我们告诉Cloud我们想要连接的事物的IP、端口和密码后，Cloud将产生一个连接请求报文发给事物。</div>
+<div>
+<div>{</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “type” : “connect”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “secureKey” : “ABCDEF”</div>
+</div>
+<div>}</div>
+
+<div><b>2、“自我描述”报文</b></div>
+<div>当事物收到连接报文以后，如果该事物同意连接，那么它将产生一个“自我描述”的报文，</div>
+<div>该报文主要告诉Cloud自己拥有多少个属性及其类型、多少个事件及其携带值列表声明、多少个方法及其参数列表声明等。</div>
+<div>当Cloud收到该报文，就可以根据这些描述为该事物创建一个呈现。</div>
+<div>
+<div>{</div>
+</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “type” : “selfDescription”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “eventPort” : 9001,</div>
+<div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “property” : [</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; {</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “name” : “property1”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “type” : “number”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;other optional fields&gt;</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; },</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;other properties&gt;</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; ],</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “event” : [</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; {</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “name” : “event1”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “type” : “number”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “updateProperty” : “property1”</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; },</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;other events&gt;</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; ],</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “function” : [</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; {</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “name” : “function1”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “type” : “boolean”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “parameter” : [</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; {</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “name” : “parameter1”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “type” : “number”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;other optional fields&gt;</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; },</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;other parameters&gt;</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; ]</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; },</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;other functions&gt;</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; ]</div>
+</div>
+<div>}</div>
+<div><b>3、“事件”报文</b></div>
+<div>当事物内部发生状态变迁时，它会发送一个事件报文并携带值给Cloud。</div>
+<div>Cloud可依此更新该事物的属性值或者运行应用程序。</div>
+<div>
+<div>{</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “type” : “event”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “event” : “event-name”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “value” : &lt;value of the event&gt;</div>
+</div>
+<div>}</div>
+<div><b>4、“方法执行”报文、“方法响应”报文</b></div>
+<div>当我们通过Cloud请求执行一个事物的方法时，Cloud会创建一个方法执行请求报文，其中包含方法名称和相应的参数列表。</div>
+<div>
+<div>{</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “type” : “call”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “function” : “function-name”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “parameter” : {</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “parameter1” : &lt;value1&gt;,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “parameter2” : &lt;value2&gt;,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;other parameter-value pairs&gt;</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }</div>
+</div>
+<div>}</div>
+<div>事物执行相应动作之后，返回一个报文并携带一定值来告知Cloud执行结果。</div>
+<div>
+<div>{</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “type” : “function”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “function” : “function-name”</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “value” : &lt;value&gt;</div>
+</div>
+<div>}</div>
+<div><b>5、“断开连接”报文、“再见”报文</b><br></div>
+<div>当我们希望从Cloud中移除一个事物，Cloud会发送一个报文给事物请求断开连接。</div>
+<div>
+<div>{</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “type” : “disconnect”</div>
+</div>
+<div>}</div>
+<div>如果事物同意，那么它就会返回一个同意断开连接的报文和Cloud说再见。</div>
+<div>
+<div>{</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “type” : “byebye”</div>
+</div>
+<div>}</div>
+<div><b>6、“错误”报文</b></div>
+<div>任何时候，事物不能正确处理Cloud发来的请求时，就会返回一个错误报文，包含错误信息。</div>
+<div>
+<div>{</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “type” : “error”,</div>
+<div>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; “message” : “error message”</div>
+<div>}</div>
+</div>
+<div><br></div>
+<div>“宇言”协议语义部分是基于JSON的，JSON轻量、低冗余、全语言支持、易扩展。</div>
+<div>“宇言”协议的传输部分是基于TCP或UDP的，但不限于此。一个特殊的自治“文明二次方”系统中，可以有自己独特的实现。</div>
+                </div>
+                <div id="protocol-body-en" class="col-lg-8 col-lg-offset-2 en" style="display: none;">
 <div>The Universa Language协议（简称“宇言”协议），</div>
 <div>是一种交互规范，它要求所有事物都具有统一接口。</div>
 <div>是一种语义协议，它定义交互的流程与交互内容的语法格式。</div>
@@ -411,12 +697,110 @@ Cloud会自动和事物沟通，把它连接上来，并为其创建呈现，这
         <div class="container">
             <div class="row">
                 <div class="col-lg-12 text-center">
-                    <h2>The Universa Cloud：一个强大的基础设施、运算框架、应用平台</h2>
+                    <h2 class="cn">The Universa Cloud：一个强大的基础设施、运算框架、应用平台</h2>
+                    <h2 class="en" style="display: none;">The Universa Cloud: A Powerful Infrastructure, Computing Framework, Application Platform</h2>
                     <hr class="star-primary">
                 </div>
             </div>
             <div class="row">
-                <div class="col-lg-8 col-lg-offset-2">
+                <div id="cloud-body-cn" class="col-lg-8 col-lg-offset-2 cn">
+<div>The Universa Cloud是“宇言”的重要组成部分和核心驱动力。</div>
+<div>它主要由四大功能模块组成：</div>
+<ol><li><u>Universa Protocol Module</u>：The Universa Cloud是<b>“宇言”协议的云端实现部分</b>。该功能模块主要完成与事物间的通信。<br>
+事物连接到Cloud之后，该模块会<b>为事物创建一个呈现</b>，该呈现包含属性、事件、方法。<br>
+当事物发来事件时，该模块会<b>对事件进行处理</b>。</li><li><u>Web Server</u>：我们无法与事物直接进行交互和对其进行管理，因此我们需要一个<b>图形化用户界面</b>，通过Cloud作为代理完成这些操作。<br>
+首先该模块为我们提供<b>用户账户管理</b>功能。其次该模块会<b>为事物的呈现提供图形化交互界面</b>，通过Web的方式展示出来，使得事物可以看得见、摸得着、用得了。<br>
+该模块还对事物的<b>属性值进行图形化</b>，使得我们可以通过图表的方式去审视事物的属性值（当前值和历史值）。<br>
+该模块还会<b>为事物创建RESTful API</b>，使得事物可以和现有Internet应用无缝整合。<br>
+出于安全考虑，该模块还会对事物及其API进行<b>访问控制</b>。最后该模块还允许我们<b>创建应用程序</b>以便按需执行。</li><li><u>Application Platform</u>：该模块提供对事物的编程环境，还会接收到Universa Protocol Module发来的事件通知，<br>
+并解析存储于Cloud的应用程序，当该事件满足某个应用程序的触发条件时，<b>执行该应用程序</b>。</li><li><u>Database</u>：该模块是其他三个模块的服务模块，它会存储事物的呈现、事物的属性值、应用程序、用户账户、访问控制数据、Web服务器自身数据等。</li></ol>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/UniversaCloud.png" alt="" width="675"></div><br></div>
+<div><br></div>
+<div><b>1、</b><b>“宇言”协议的云端实现</b></div>
+<div>The Universa Language协议是“宇言”的灵魂，然而光有灵魂，我们什么也做不了。</div>
+<div>The Universa Cloud是“宇言”的重要组成部分，在“宇言”协议的交互流程当中起着重要的作用。</div>
+<div>具体可以参考【“宇言”协议的典型交互流程】部分。</div>
+<div><br></div>
+<div><b>2、</b><b>为事物创建统一呈现</b></div>
+<div>事物是现实世界的实体，当我们需要和事物沟通（或者事物间需要相互沟通）、管理事物的时候，</div>
+<div>我们不希望直接去和事物对话（实际上大部分时候不太可能），</div>
+<div>也不希望直接动手去管理这些具体的事物（原因可能是太远、太重、太大、太小、太多等等）。</div>
+<div>“宇言”协议将所有事物都抽象为具有统一接口的对象，因此所有相互沟通与协作是通过这些虚拟对象来完成的。</div>
+<div>而The Universa Cloud就会为事物创建这种虚拟呈现。</div>
+<div>这个创建过程是全自动的，我们无需干预，只需告诉Cloud必要连接信息，Cloud就会主动去联系事物，</div>
+<div>从事物那里获得它的“自我描述”，根据这个“自我描述”自动创建一个呈现。</div>
+<div>这一切得益于“宇言”协议。</div>
+<div><br></div>
+<div><b>3、事物的</b><b>事件处理</b></div>
+<div>事物主动推送事件将解决两个问题。</div>
+<div>第一，如何保持事物的属性值始终最新？</div>
+<div>如果我们以主动拉取（pull）的方式获取，那么无论我们设置多长的时间间隔都不能保证属性值始终最新。并且过多查询请求是对资源的一种浪费。</div>
+<div>而事物本身是最清楚什么时候需要更新属性值的——内部状态发生变迁的时候，这时它发送一个事件给Cloud并携带合适的数据值，</div>
+<div>这样Cloud通过查询该事物的呈现得知该事件可以更新某个属性值，Cloud就会帮忙保持属性值更新。</div>
+<div>第二，我们希望在某个事物发生某些变化的时候采取一些对策。</div>
+<div>事件是最好的通知，Cloud收到这个事件后，就允许我们执行预先编写好的应用程序，从而实现我们采取的对策。</div>
+<div><br></div>
+<div><b>4、</b><b>图形化用户界面</b></div>
+<div>我们需要和事物沟通、编写应用程序、实现事物间协作。</div>
+<div>这一切操作需要通过工具，The Universa Cloud为我们提供了基于Web的图形化用户界面。</div>
+<div>这样的好处是：</div>
+<div>首先，Web在Internet中是被广泛认可和应用的，我们通过Web方式去访问用户界面，</div>
+<div>无需安装任何额外的软件，所有流行操作系统都自带浏览器。</div>
+<div>其次，当前Internet中有许多成功的应用如SNS等，这套图形界面既可以利用现有Web应用实现自己，</div>
+<div>又可以把自己作为对现有Web的扩展，从而融入现有Internet，帮助现有Internet平滑进入下一阶段。</div>
+<div><br></div>
+<div><b>5、</b><b>用户账户管理</b></div>
+<div>我们需要使用Cloud提供的服务，那么我们需要拥有一个账户。</div>
+<div>Cloud除了为我们提供基本用户账户管理之外，</div>
+<div>还允许我们把我们所拥有的事物添加进我们的账户名下进行管理，</div>
+<div>我们编写的应用程序也会保存在我们的账户里面，还有事物的属性值及其历史等。</div>
+<div><br></div>
+<div><b>6、</b><b>为事物的呈现提供图形化交互界面</b></div>
+<div>当事物都被抽象为具有统一接口的呈现时，</div>
+<div>我们作为人仍然无法直接去读取他们的属性值和执行它们的方法。</div>
+<div>因此，Cloud帮我们依据事物的呈现自动生成Web交互界面，</div>
+<div>我们可以通过一个URL去访问事物，点击一个链接读取属性值，提交一个表单来执行事物的方法。</div>
+<div>我们还可以把这个URL发布到社交网站上去和好友分享。</div>
+<div><br></div>
+<div><b>7、事物的</b><b>属性值图形化</b></div>
+<div>我们读取到的属性值是一个奇怪的数字还是一段读不懂的文字呢？</div>
+<div>Cloud提供若干方式让我们以图形化的形式去查看事物的属性值或者审视属性值的历史变迁。</div>
+<div><br></div>
+<div><b>8、</b><b>为事物创建RESTful API</b></div>
+<div>读取事物的属性值需要点击若干链接？</div>
+<div>执行事物的方法需要填写一个表单？</div>
+<div>这些对我们人来说是直观而自然的交互方式。</div>
+<div>Universa不是一个独立个体，它无缝融入现有Web。</div>
+<div>一些现有的Web应用通过RESTful API的形式相互合作，</div>
+<div>而Cloud为满足需求，根据事物的呈现自动为事物创建RESTful API。</div>
+<div>设想一下，通过"http://UniversaCloud/thing/light/on?brightness=60"来打开灯的开关同时还能设定亮度是不是很酷呢？</div>
+<div><br></div>
+<div><b>9、</b><b>访问控制</b></div>
+<div>安全问题始终很重要。</div>
+<div>除了通过用户账户管理来控制其他用户不能直接管理我们的事物之外，</div>
+<div>我们分享出去事物的URL是为了让别人也来使用我们的事物，</div>
+<div>那么这里就需要更细腻的访问控制了。</div>
+<div>Cloud提供对每个事物访问请求和控制。</div>
+<div>好友第一次访问我们的事物时，是需要发送请求给我们的，我们批准之后，他们才可以继续使用。</div>
+<div>如果需要，Cloud可以提供细致到单个属性、事件、方法的访问控制。</div>
+<div><br></div>
+<div><b>10、</b><b>应用程序</b><b>创建</b></div>
+<div>为了实现事物间协作，我们需要编写应用程序。</div>
+<div>Cloud为我们提供在线编写应用程序的功能。</div>
+<div>它甚至是可视化的，左边是哪些事物的事件及其需要满足的条件，右边是相应执行的方法和参数。</div>
+<div>点击保存，Cloud就会帮我们存储这个应用程序。</div>
+<div><br></div>
+<div><b>11、</b><b>应用程序</b><b>执行</b></div>
+<div>Cloud会处理事务发来的事件，当该事件满足某个应用程序的运行条件时，</div>
+<div>Cloud就会唤起该应用程序，执行该应用程序指定的所有动作。</div>
+<div><br></div>
+<div>The Universa Cloud通过四个主要功能模块实现了这11个主要功能，</div>
+<div>The Universa Cloud作为基础设施把所有事物都连接起来，让万物协作成为可能；</div>
+<div>作为运算框架创建事物的呈现、响应事物的事件、执行应用程序等，从而成为Universa的核心动力；</div>
+<div>作为应用平台提供图形化界面、为事物创建Web交互界面、为事物提供RESTful API等，从而扩展现有Web。</div>
+<div>The Universa Cloud是实现和推进“文明二次方”的实体和动力。</div>
+                </div>
+                <div id="cloud-body-en" class="col-lg-8 col-lg-offset-2 en" style="display: none;">
 <div>The Universa Cloud是“宇言”的重要组成部分和核心驱动力。</div>
 <div>它主要由四大功能模块组成：</div>
 <ol><li><u>Universa Protocol Module</u>：The Universa Cloud是<b>“宇言”协议的云端实现部分</b>。该功能模块主要完成与事物间的通信。<br>
@@ -522,12 +906,13 @@ Cloud会自动和事物沟通，把它连接上来，并为其创建呈现，这
         <div class="container">
             <div class="row">
                 <div class="col-lg-12 text-center">
-                    <h2>一个基本应用演示</h2>
+                    <h2 class="cn">一个基本应用演示</h2>
+                    <h2 class="en" style="display: none;">Demostration of A Simple Application</h2>
                     <hr class="star-light">
                 </div>
             </div>
             <div class="row">
-                <div class="col-lg-8 col-lg-offset-2">
+                <div id="demo-body-cn" class="col-lg-8 col-lg-offset-2 cn">
 <div>接下来，我们将通过一个最简单的应用实例来体验Universa的基本应用流程。</div>
 <div>Alice拥有一个符合“宇言”协议的智能温度计Thermometer。她希望把它连接到The Universa Cloud上。</div>
 <div>于是她访问The Universa Cloud创建账户并登录。</div>
@@ -559,6 +944,38 @@ Cloud会自动和事物沟通，把它连接上来，并为其创建呈现，这
 <div>通过这个应用，我们可以看出通过Universa，人与事物、事物间沟通和协作是如此的简单。</div>
 <div>任何两个事物都可以沟通，我们可以决定它们如何协作，从而有无限可能。</div>
                 </div>
+                <div id="demo-body-en" class="col-lg-8 col-lg-offset-2 en" style="display: none;">
+<div>Now let us understand the basic application flow of Universa through the demostration of a simple application.</div>
+<div>Alice has a smart thermometer called Thermometer that conforms to the Universa protocol. She wants to connect it to The Universa Cloud.</div>
+<div>So she accesses to The Universa Cloud and creates an account, then login with that.</div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/01-register.png" alt=""></div></div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/02-login.png" alt=""></div></div>
+<div>Alice added her Thermometer to the Cloud by only inputing some necessary information and with the effort of Cloud that finished it automatically.</div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/03-add_thing.png" alt=""></div></div>
+<div>After communicating with Thermometer through Universa protocol, Cloud creates a presence for Thermometer according to the "self description" sent from Thermometer, Cloud also creates web interfaces for that presence.</div>
+<div>We can clearly see how many properties, events and functions are there in Thermometer.</div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/08-Thermometer.png" alt="" width="722"></div><br></div>
+<div>Alice can look up the current value of Thermometer through the gauge view. She can also inspect the history of the value through the line chart view.</div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/15-gauge.png" alt="" width="655"></div><br></div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/13-linechart.png" alt="" width="651"></div><br></div>
+<div>Alice has got known that her friend Bob has a tool called SinaWeiboer (it actually is a software), so she tries to access the SinaWeiboer through the URL share by Bob.</div>
+<div>However, she finds that it needs Bob's authorization to access it, so she submitted a access request.</div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/04-request_for_access.png" alt=""></div><br></div>
+<div>After acceptance from Bob, Alice refreshes the page and can access the SinaWeiboer now.</div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/09-SinaWeiboer.png" alt="" width="687"></div><br></div>
+<div>Alice finds SinaWeiboer has a function call "tweet", so she clickes that link and tests its functionality online.</div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/16-Call_From_Web.png" alt=""></div></div>
+<div>After the page shows successful message, Alice opens her Weibo page and finds that test message is correctly sent.<br></div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/17-SinaWeiboer_Test.png" alt=""></div></div>
+<div>At this time, Alice has got an idea: Whenever Thermometer detects the temperature lower than 15 degree, she expects a Weibo alert message through SinaWeiboer.</div>
+<div>So Alice opens the application creation interface, creates a simple application through the graphical means.</div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/18-Add_Script.png" alt="" width="678"></div></div>
+<div>As Alice expected, on 20:31:36 that night, Thermometer sent Alice a Weibo message through SinaWeiboer due to temperature lower than 15 degree.</div>
+<div><div><img src="http://oitistang.github.io/CivilizationQuadratic/images/19-Temperature_On_SinaWeibo.png" alt=""></div><br></div>
+<div><br></div>
+<div>Through this application, we can see that with the help of Universa, communication and cooperation between people and things are so easy.</div>
+<div>Any two things can communicate with each other, then we can decide how do they cooperate, so there are infinite possibilites.</div>
+                </div>
             </div>
         </div>
     </section>
@@ -570,12 +987,60 @@ Cloud会自动和事物沟通，把它连接上来，并为其创建呈现，这
         <div class="container">
             <div class="row">
                 <div class="col-lg-12 text-center">
-                    <h2>应用前景</h2>
+                    <h2 class="cn">应用前景</h2>
+                    <h2 class="en" style="display: none;">Vision</h2>
                     <hr class="star-primary">
                 </div>
             </div>
             <div class="row">
-                <div class="col-lg-8 col-lg-offset-2">
+                <div id="vision-body-cn" class="col-lg-8 col-lg-offset-2 cn">
+<div><b>Universa在生活中的应用案例：</b></div>
+<div>周末快到了，我在手机的日历中周六那一天写下“邀请三个好友到家里来做客”。</div>
+<div>手机发送这个事件到Universa Cloud中。</div>
+<div>之前购买并部署的Smart Party Planning应用被触发运行。</div>
+<div>该应用调用我的淘宝账户去花店预定了周六的两束花朵。</div>
+<div>该应用询问我的冰箱里还有多少水果。然后计算得到还需要一斤苹果、两斤香蕉。</div>
+<div>于是该应用向水果店订购了这些水果。</div>
+<div>水果派送员上门时，他的胸牌被我家大门识别为可信伙伴，因此大门打开窗口允许派送员把水果递进去。</div>
+<div>家里的管家机器人把水果送进冰箱。</div>
+<div>周六到了，Famous Cook应用根据我的口味从Amazing Recipe网站下载了几个有名菜单，</div>
+<div>推送给我的智能厨房，不一会儿，几个香喷喷的菜就做好了。</div>
+<div>两束花插在花瓶里了，水果也由智能水果机削好、切好了。</div>
+<div>Party正式开始！生活就是这么简单美好！</div>
+<div><br></div>
+<div><b>Universa在工作中的应用案例：</b></div>
+<div>公司的大门识别员工（可以通过胸卡，或者探测体温、心跳等生理特征），允许其进入，并自动记录上下班时间。</div>
+<div>如有访客近来，自动派发门卡给访客，访客所有的行为和路径被跟踪。</div>
+<div>所有物品的出入皆由大门记录，如有异常，自动报警和关门。</div>
+<div>A项目组6个人准备开一个会议，Meeting Planner应用自动找到一个合适大小的会议室，打开投影仪，</div>
+<div>并开启一个WebEx在线会议，同时触发几位同事的WebEx客户端进入会议。</div>
+<div>在会议中，几位同事讨论并编写了一个应用，它控制实验室设备迅速组成试验网络。</div>
+<div>下班了，Power Saver应用根据实验室设备的负载情况自动调度这些设备在合适的时间关机。
+<div><br></div>
+<div><b>Universa在科研中的应用案例：</b></div>
+<div>无数花草树木、飞禽走兽、高山流水都无时无刻不在向我们诉说着它们的感受，</div>
+<div>我们可以由此获得大量来自自然的数据，进行分析，发现规律。</div>
+<div>自然万物还是我们进行科学实验的直接试验场，能让我们知道人类行为是如何影响到周围环境的。</div>
+</div>
+<div>指导我们更好地利用自然、和自然共存、保护自然。</div>
+<div><br></div>
+<div><b>Universa在娱乐中的应用案例：</b></div>
+<div>想像梁朝伟那样，有时闲着闷了，会临时中午去机场，随便赶上哪班就搭上哪班机，</div>
+<div>比如飞到伦敦，独自蹲在广场上喂一下午鸽子，不发一语，当晚再飞回香港，当没事发生过一样吗？</div>
+<div>不，你不需要坐飞机。</div>
+<div>只需去一个超级模拟屋，带上虚拟现实眼镜。</div>
+<div>你想去英国伦敦广场，你看到的就是伦敦广场上摄像机给你发回的画面，听到的就是那里话筒接收到的鸽子叫声。</div>
+<div>你想去巴西里约热内卢海滩，你就可以晒到根据海滩上阳光探测器的数据模拟的阳光。</div>
+<div>你想去法国普罗旺斯薰衣草田，你就可以闻到根据探测到的花香成分调配的薰衣草花香。</div>
+<div>这个模拟屋可以实时模拟当地的风向、温度、适度、声音，让你身临其境。</div>
+<div><br></div>
+<div>
+<div>Universa使得万物沟通，万物协作。</div>
+<div>它使得创建应用更为简单，解决问题更为容易，发挥创意更加迅速。</div>
+<div>它也将为新兴企业和行业带来全新的市场机遇，也将在我们生活、工作、科研、娱乐等各方面带来极大变革。</div>
+</div>
+                </div>
+                <div id="vision-body-en" class="col-lg-8 col-lg-offset-2 en" style="display: none;">
 <div><b>Universa在生活中的应用案例：</b></div>
 <div>周末快到了，我在手机的日历中周六那一天写下“邀请三个好友到家里来做客”。</div>
 <div>手机发送这个事件到Universa Cloud中。</div>
@@ -631,12 +1096,24 @@ Cloud会自动和事物沟通，把它连接上来，并为其创建呈现，这
         <div class="container">
             <div class="row">
                 <div class="col-lg-12 text-center">
-                    <h2>机遇与挑战</h2>
+                    <h2 class="cn">机遇与挑战</h2>
+                    <h2 class="en" style="display: none;">Opportunities &amp; Challenges</h2>
                     <hr class="star-light">
                 </div>
             </div>
             <div class="row">
-                <div class="col-lg-8 col-lg-offset-2">
+                <div id="opportunity-challenge-body-cn" class="col-lg-8 col-lg-offset-2 cn">
+<div>在“万物互联”战略中，谁能最快地适应“万物互联”发展趋势，抢占市场先机，才能成为赢家。</div>
+<div>Universa拥抱现有Internet资源和优势，利用“云计算”，</div>
+<div>连接无限广阔的事物，推动“雾计算”，并继续整合到Internet中。</div>
+<div>它不仅顺应Internet潮流发展，同时利用Internet推动“万物互联”发展。</div>
+<div><br></div>
+<div>然而，实现世界的完全互联还有很长一段路要走。</div>
+<div>万物互联的易用性和安全性的矛盾始终是一个问题。</div>
+<div>因此我们除了需要研发更便利的万物互联协议和更强大的网络之外，</div>
+<div>更灵活、更适用的安全协议与解决方案也需要相应地研发出来。</div>
+                </div>
+                <div id="opportunity-challenge-body-en" class="col-lg-8 col-lg-offset-2 en" style="display: none;">
 <div>在“万物互联”战略中，谁能最快地适应“万物互联”发展趋势，抢占市场先机，才能成为赢家。</div>
 <div>Universa拥抱现有Internet资源和优势，利用“云计算”，</div>
 <div>连接无限广阔的事物，推动“雾计算”，并继续整合到Internet中。</div>
@@ -658,12 +1135,13 @@ Cloud会自动和事物沟通，把它连接上来，并为其创建呈现，这
         <div class="container">
             <div class="row">
                 <div class="col-lg-12 text-center">
-                    <h2>支持我们，加入我们</h2>
+                    <h2 class="cn">支持我们，加入我们</h2>
+                    <h2 class="en" style="display: none;">Support Us, Join Us</h2>
                     <hr class="star-primary">
                 </div>
             </div>
             <div class="row">
-                <div class="col-lg-8 col-lg-offset-2">
+                <div id="us-body-cn" class="col-lg-8 col-lg-offset-2 cn">
 <div>我们渴望这样一个万物互联的世界！</div>
 <div>我们相信这样一个无限可能的未来！</div>
 <div>
@@ -672,6 +1150,17 @@ Cloud会自动和事物沟通，把它连接上来，并为其创建呈现，这
 <div><br></div>
 <div>我们需要您的支持！</div>
 <div>我们期待您的加入！</div>
+</div>
+                </div>
+                <div id="us-body-en" class="col-lg-8 col-lg-offset-2 en" style="display: none;">
+<div>We desire a world that all things are connected!</div>
+<div>We belive a future that everything is possible!</div>
+<div>
+<div>We are striving to build a platform for this dream!</div>
+<div>We are doing our best to create Civilization Quadratic!</div>
+<div><br></div>
+<div>We need your support!</div>
+<div>We are expecting your joining!</div>
 </div>
                 </div>
             </div>
@@ -684,7 +1173,8 @@ Cloud会自动和事物沟通，把它连接上来，并为其创建呈现，这
             <div class="container">
                 <div class="row">
                     <div class="col-lg-12">
-                        <strong>“文明二次方” —— 万物沟通与协作</strong>
+                        <strong class="cn">“文明二次方” —— 万物沟通与协作</strong>
+                        <strong class="en" style="display: none;">"Civilization Quadratic" —— Massive Communication and Cooperation</strong>
                         <br>
                         <small>Copyright &copy; Civilization Quadratic 2014</small>
                     </div>

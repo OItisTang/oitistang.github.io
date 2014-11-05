@@ -15,6 +15,16 @@ function loadjscssfile(filename, filetype){
      }
 }
 
+function show_cn() {
+     $('.cn').show(); $('.en').hide();
+     document.title = '“文明二次方” -- 万物沟通与协作';
+}
+
+function show_en() {
+     $('.cn').hide(); $('.en').show();
+     document.title = '"Civilization Quadratic" -- Massive Communication and Cooperation';
+}
+
 $(function(){
      // title
      document.title = '“文明二次方” -- 万物沟通与协作';
@@ -26,56 +36,88 @@ $(function(){
      $(".navbar-inverse").css('height', '0px').prependTo('#page-top');
      $('body').prepend(
           '<nav id="my-navbar" class="navbar navbar-default navbar-fixed-top">' +
-          '        <div class="container">' +
-          '            <!-- Brand and toggle get grouped for better mobile display -->' +
-          '            <div class="navbar-header page-scroll">' +
-          '                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">' +
-          '                    <span class="sr-only">Toggle navigation</span>' +
-          '                    <span class="icon-bar"></span>' +
-          '                    <span class="icon-bar"></span>' +
-          '                    <span class="icon-bar"></span>' +
-          '                </button>' +
-          '                <a class="navbar-brand" href="#page-top">文明二次方</a>' +
-          '            </div>' +
-          '' +
-          '            <!-- Collect the nav links, forms, and other content for toggling -->' +
-          '            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">' +
-          '                <ul class="nav navbar-nav navbar-right">' +
-          '                    <li class="hidden">' +
-          '                        <a href="#page-top"></a>' +
-          '                    </li>' +
-          '                    <li class="page-scroll">' +
-          '                        <a href="#summary">摘要</a>' +
-          '                    </li>' +
-          '                    <li class="page-scroll">' +
-          '                        <a href="#concept">概念</a>' +
-          '                    </li>' +
-          '                    <li class="page-scroll">' +
-          '                        <a href="#universa">宇言</a>' +
-          '                    </li>' +
-          '                    <li class="page-scroll">' +
-          '                        <a href="#protocol">协议</a>' +
-          '                    </li>' +
-          '                    <li class="page-scroll">' +
-          '                        <a href="#cloud">Cloud</a>' +
-          '                    </li>' +
-          '                    <li class="page-scroll">' +
-          '                        <a href="#demo">演示</a>' +
-          '                    </li>' +
-          '                    <li class="page-scroll">' +
-          '                        <a href="#vision">应用前景</a>' +
-          '                    </li>' +
-          '                    <li class="page-scroll">' +
-          '                        <a href="#opportunity-challenge">机遇与挑战</a>' +
-          '                    </li>' +
-          '                    <li class="page-scroll">' +
-          '                        <a href="#us">我们</a>' +
-          '                    </li>' +
-          '                </ul>' +
-          '            </div>' +
-          '            <!-- /.navbar-collapse -->' +
-          '        </div>' +
-          '        <!-- /.container-fluid -->' +
+               '<div class="container">' +
+               '    <!-- Brand and toggle get grouped for better mobile display -->' +
+               '    <div class="navbar-header page-scroll">' +
+               '    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">' +
+               '        <span class="sr-only">Toggle navigation</span>' +
+               '        <span class="icon-bar"></span>' +
+               '        <span class="icon-bar"></span>' +
+               '        <span class="icon-bar"></span>' +
+               '    </button>' +
+               '    <a class="navbar-brand cn" href="#page-top">文明二次方</a>' +
+               '    <a class="navbar-brand en" href="#page-top"  style="font-size: 20px; display: none;">Civilization Quadratic</a>' +
+               '    </div>' +
+               '' +
+               '    <!-- Collect the nav links, forms, and other content for toggling -->' +
+               '    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">' +
+               '    <ul class="nav navbar-nav navbar-right">' +
+               '        <li class="hidden">' +
+               '         <a href="#page-top"></a>' +
+               '        </li>' +
+               '        <li class="page-scroll">' +
+               '         <a href="#summary">' +
+               '             <div class="cn">摘要</div>' +
+               '             <div class="en" style="font-size: 12px; display: none;">Summary</div>' +
+               '         </a>' +
+               '        </li>' +
+               '        <li class="page-scroll">' +
+               '         <a href="#concept">' +
+               '             <div class="cn">概念</div>' +
+               '             <div class="en" style="font-size: 12px; display: none;">Concept</div>' +
+               '         </a>' +
+               '        </li>' +
+               '        <li class="page-scroll">' +
+               '         <a href="#universa">' +
+               '             <div class="cn">宇言</div>' +
+               '             <div class="en" style="font-size: 12px; display: none;">Universa</div>' +
+               '         </a>' +
+               '        </li>' +
+               '        <li class="page-scroll">' +
+               '         <a href="#protocol">' +
+               '             <div class="cn">协议</div>' +
+               '             <div class="en" style="font-size: 12px; display: none;">Protocol</div>' +
+               '         </a>' +
+               '        </li>' +
+               '        <li class="page-scroll">' +
+               '         <a href="#cloud">' +
+               '             <div class="cn">Cloud</div>' +
+               '             <div class="en" style="font-size: 12px; display: none;">Cloud</div>' +
+               '         </a>' +
+               '        </li>' +
+               '        <li class="page-scroll">' +
+               '         <a href="#demo">' +
+               '             <div class="cn">演示</div>' +
+               '             <div class="en" style="font-size: 12px; display: none;">Demo</div>' +
+               '         </a>' +
+               '        </li>' +
+               '        <li class="page-scroll">' +
+               '         <a href="#vision">' +
+               '             <div class="cn">应用前景</div>' +
+               '             <div class="en" style="font-size: 12px; display: none;">Vision</div>' +
+               '         </a>' +
+               '        </li>' +
+               '        <li class="page-scroll">' +
+               '         <a href="#opportunity-challenge">' +
+               '             <div class="cn">机遇与挑战</div>' +
+               '             <div class="en" style="font-size: 12px; display: none;">Op &amp; Ch</div>' +
+               '         </a>' +
+               '        </li>' +
+               '        <li class="page-scroll">' +
+               '         <a href="#us">' +
+               '             <div class="cn">我们</div>' +
+               '             <div class="en" style="font-size: 12px; display: none;">Us</div>' +
+               '         </a>' +
+               '        </li>' +
+               '        <li class="page-scroll">' +
+               '         <a href="#" class="cn" onclick="show_en()">English</a>' +
+               '         <a href="#" class="en" onclick="show_cn()" style="font-size: 12px; display: none;">中文</a>' +
+               '        </li>' +
+               '    </ul>' +
+               '    </div>' +
+               '    <!-- /.navbar-collapse -->' +
+               '</div>' +
+               '<!-- /.container-fluid -->' +
           '</nav>'
      );
 
