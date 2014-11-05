@@ -29,6 +29,9 @@ $(function(){
      // title
      document.title = '“文明二次方” -- 万物沟通与协作';
 
+     // favicon
+     $('head').append('<link href="http://oitistang.github.io/CivilizationQuadratic/images/CivilizationQuadratic.png" rel="shortcut icon" type="image/png"/>');
+
      // styles
      $(".main_content").css("padding-left", "0px").css("padding-right", "0px");
 
