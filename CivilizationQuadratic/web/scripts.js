@@ -72,8 +72,10 @@ $(function(){
                '        </li>' +
                '        <li class="page-scroll">' +
                '         <a href="#universa">' +
-               '             <div class="cn">宇言</div>' +
-               '             <div class="en" style="font-size: 12px; display: none;">Universa</div>' +
+               '             <font color="yellow">' +
+               '                 <div class="cn"><i class="fa fa-fw fa-play-circle-o"></i>宇言</div>' +
+               '                 <div class="en" style="font-size: 12px; display: none;"><i class="fa fa-fw fa-play-circle-o"></i>Universa</div>' +
+               '             </font>' +
                '         </a>' +
                '        </li>' +
                '        <li class="page-scroll">' +
@@ -90,8 +92,10 @@ $(function(){
                '        </li>' +
                '        <li class="page-scroll">' +
                '         <a href="#demo">' +
-               '             <div class="cn">演示</div>' +
-               '             <div class="en" style="font-size: 12px; display: none;">Demo</div>' +
+               '             <font color="yellow">' +
+               '                 <div class="cn"><i class="fa fa-fw fa-car"></i>演示</div>' +
+               '                 <div class="en" style="font-size: 12px; display: none;"><i class="fa fa-fw fa-car"></i>Demo</div>' +
+               '             </font>' +
                '         </a>' +
                '        </li>' +
                '        <li class="page-scroll">' +
