@@ -130,6 +130,9 @@ $(function(){
      // remove designer floater
      $('.mastfoot').hide();
 
+     // fix vote bar
+     $('.idea_progress').css('top', '140px');
+
      // css
      // Bootstrap Core CSS - Uses Bootswatch Flatly Theme: http://bootswatch.com/flatly/
      loadjscssfile("http://oitistang.github.io/CivilizationQuadratic/web/css/bootstrap.min.css", "css");
