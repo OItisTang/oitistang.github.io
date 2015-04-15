@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=620">
+<title>China Toastmasters Map</title>
+<link rel="shortcut icon" href="./favicon.ico" type="image/x-icon" />
+<style type="text/css">
+.title{text-align: center;}
+
+.map-area{width:600px; height:500px; margin:10px auto 0 auto;}
+.info{text-align: center; font: 16px/18px "Microsoft Yahei", Tahoma, Helvetica, Arial, Verdana, "\5b8b\4f53", sans-serif; color: #51555C;}
+.fix-height{min-height:40px;}
+.splitter{width:40px;}
+.district{cursor: pointer; cursor: hand; background-color: #97d6f5; text-align: center; display: inline-block; width: 120px; height: 24px; line-height: 24px;}
+.district:hover {background-color: yellow; color: blue;}
+
+#footer{height:20px;}
+#footer p{font-size: 10px;}
+</style>
+<script type="text/javascript" src="./ChinaMap/raphael.js"></script>
+<script type="text/javascript" src="./ChinaMap/chinamapPath.js"></script>
+</head>
+
+<body>
+<div id="header">
+   <table align="center" style="margin: 0px auto;">
+      <tr>
+         <td>
+            <img src="./ToastmastersLogo.png" height="64px">
+         </td>
+         <td>
+            <h2 class="title">China Toastmasters Map</h2>
+         </td>
+      </tr>
+   </table>
+</div>
+
+<div id="main">
+   <hr>
+   <div class="map-area">
+   		<div id="map"></div>
+   </div>
+   <div id="districts" class="info">
+      <span id="district85" class="district">
+          District85
+      </span>
+      <span class="splitter">&nbsp;</span>
+      <span id="district89" class="district">
+          District89
+      </span>
+      <span class="splitter">&nbsp;</span>
+      <span id="district67" class="district">
+          District67
+      </span>
+   </div>
+   <hr>
+   <div id="detailed-info" class="info fix-height">
+      Click any State or any District to get detailed info.
+   </div>
+   <hr>
+   <div class="info">
+      Toastmasters International: <a href="http://toastmasters.org/">toastmasters.org</a>
+   </div>
+</div>
+
+<div id="footer">
+	<div id="padding">&nbsp;</div>
+    <p class="info">Powered by helloweba.com</p>
+</div>
+
+<script type="text/javascript">
+window.onload = function () {
+    var isMobile = false;
+    if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
+        isMobile = true;
+    }
+
+    // District websites
+    var websites = {};
+    websites["85"] = 'd85toastmasters.org';
+    websites["89"] = 'd89toastmasters.org';
+    websites["67"] = 'www.toastmasters.org.tw';
+
+    var R = Raphael("map", 600, 500);
+	//调用绘制地图方法
+    paintMap(R);
+	
+	var textAttr = {
+        "fill": "#000",
+        "font-size": "12px",
+        "cursor": "pointer"
+    };
+    
+    // event funcitons
+    function highlightColor(st) {
+        st.animate({fill: st.color, stroke: "#eee"}, 500);
+        //china[state]['text'].toFront();
+        R.safari();
+    };
+    function dismissColor(st) {
+        st.animate({fill: "#97d6f5", stroke: "#eee"}, 500);
+        //china[state]['text'].toFront();
+        R.safari();
+    };
+    function onMouseOver(st, displayStateInfo) {
+        highlightColor(st);
+        if(isMobile) {
+        	displayStateInfo();
+        }
+    };
+    function onMouseOut(st) {
+        dismissColor(st);
+    };
+	
+    for (var state in china) {
+		china[state]['path'].color = Raphael.getColor(0.9);
+				
+        (function (st, state) {
+			
+			//获取当前图形的中心坐标
+            var xx = st.getBBox().x + (st.getBBox().width / 2);
+            var yy = st.getBBox().y + (st.getBBox().height / 2);
+			
+            //***修改部分地图文字偏移坐标
+            switch (china[state]['name']) {
+                case "北京":
+                    xx += 16;
+                    yy -= 6;
+                    break;
+                case "江苏":
+                    xx += 5;
+                    yy -= 10;
+                    break;
+                case "河北":
+                    xx -= 10;
+                    yy += 20;
+                    break;
+                case "天津":
+                    xx += 14;
+                    yy += 4;
+                    break;
+                case "上海":
+                    xx += 14;
+                    break;
+                case "广东":
+                    yy -= 10;
+                    break;
+                case "澳门":
+                    yy += 10;
+                    break;
+                case "香港":
+                    xx += 20;
+                    yy += 5;
+                    break;
+                case "甘肃":
+                    xx -= 40;
+                    yy -= 30;
+                    break;
+                case "陕西":
+                    xx += 5;
+                    yy += 10;
+                    break;
+                case "内蒙古":
+                    xx -= 15;
+                    yy += 65;
+                    break;
+                default:
+            }
+            
+            // update toastmasters info of a state
+            function displayStateInfo() {
+            	var link = "";
+            	if (china[state]['district'] != "") {
+            		link = "<a href=\"http://" + websites[china[state]['district']] + "/\">" + websites[china[state]['district']] + "</a>";
+            	}
+                document.getElementById('detailed-info').innerHTML = 
+                	"Province: "
+                	+ china[state]['name']
+                	+ "&nbsp;&nbsp;&nbsp;&nbsp;"
+                	+ "District: "
+                	+ china[state]['district']
+                	+ "<br>"
+                	+ "Website: "
+                	+ link;
+            }
+            
+			//写入文字
+			china[state]['text'] = R.text(xx, yy, china[state]['name']).attr(textAttr);
+			
+			china[state]['text'].node.onmouseover = function () {
+			    st = china[state]['path'];
+                onMouseOver(st, displayStateInfo);
+            };
+            china[state]['text'].node.onmouseout = function () {
+			    st = china[state]['path'];
+                onMouseOut(st);
+            };
+			china[state]['text'].node.onclick = function () {
+                displayStateInfo();
+            };
+			
+			st[0].onmouseover = function () {
+                onMouseOver(st, displayStateInfo);
+            };
+            st[0].onmouseout = function () {
+                onMouseOut(st);
+            };
+            st[0].onclick = function () {
+                displayStateInfo();
+            };
+         })(china[state]['path'], state);
+    }
+
+    // update toastmasters info of a state
+    function displayDistrictInfo(districtNumber) {
+        document.getElementById('detailed-info').innerHTML = 
+            "District: "
+            + districtNumber
+            + "<br>"
+            + "Website: "
+            + "<a href=\"http://" + websites[districtNumber] + "/\">" + websites[districtNumber] + "</a>";
+    }
+
+    // district highlights
+    document.getElementById('district85').onmouseover = function () {
+        for (var state in district85) {
+            highlightColor(district85[state]['path']);
+        };
+        displayDistrictInfo(85);
+    }
+    document.getElementById('district85').onmouseout = function () {
+        for (var state in district85) {
+            dismissColor(district85[state]['path']);
+        };
+    }
+    document.getElementById('district89').onmouseover = function () {
+        for (var state in district89) {
+            highlightColor(district89[state]['path']);
+        };
+        displayDistrictInfo(89);
+    }
+    document.getElementById('district89').onmouseout = function () {
+        for (var state in district89) {
+            dismissColor(district89[state]['path']);
+        };
+    }
+    document.getElementById('district67').onmouseover = function () {
+        for (var state in district67) {
+            highlightColor(district67[state]['path']);
+        };
+        displayDistrictInfo(67);
+    }
+    document.getElementById('district67').onmouseout = function () {
+        for (var state in district67) {
+            dismissColor(district67[state]['path']);
+        };
+    }
+
+    // contact info
+    console.log("by Chenggang Tang (OItisTang@163.com) from Cisco R&D Shanghai Toastmasters Club");
+    console.log("https://github.com/OItisTang/ToastmastersChinaMap");
+}
+</script>
+</body>
+</html>
