@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Alert When Available (AWA)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="icon.png">
+<script src="https://cdn.rawgit.com/OItisTang/WebhookPublisherWebSocketSubscriber/main/WebSocketSubscriberClient/Logger.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<script type="text/javascript">
+	// ---------------------
+	// vendor
+	// ---------------------
+	function httpGetAsyncWithAuthHeader(theUrl, headerAuthorization, callback = null) {
+		var xmlHttp = new XMLHttpRequest();
+		xmlHttp.onreadystatechange = function() {
+			if (callback && xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+				callback(xmlHttp.responseText);
+			}
+		}
+		xmlHttp.open("GET", theUrl, true); // true for asynchronous
+		xmlHttp.setRequestHeader("Authorization", headerAuthorization);
+		xmlHttp.send(null);
+	}
+	
+	function findGetParameter(parameterName) {
+		var result = "";
+		var kvPair = [];
+		location.search
+			.substr(1) // eat "?" character
+			.split("&")
+			.forEach(function(item) {
+				kvPair = item.match(/(.*?)=(.*)/);
+				if (kvPair && kvPair[1] === parameterName) result = decodeURIComponent(kvPair[2]);
+			});
+		return result;
+	}
+
+	function createCookie(name, value, days) {
+		var expires;
+		if (days) {
+			var date = new Date();
+			date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+			expires = "; expires=" + date.toGMTString();
+		} else {
+			expires = "";
+		}
+		document.cookie = name + "=" + value + expires + "; path=/";
+	}
+
+	function getCookie(c_name) {
+		if (document.cookie.length > 0) {
+			c_start = document.cookie.indexOf(c_name + "=");
+			if (c_start != -1) {
+				c_start = c_start + c_name.length + 1;
+				c_end = document.cookie.indexOf(";", c_start);
+				if (c_end == -1) {
+					c_end = document.cookie.length;
+				}
+				return unescape(document.cookie.substring(c_start, c_end));
+			}
+		}
+		return "";
+	}
+
+	// ---------------------
+	// Webex APIs & Data Manager
+	// ---------------------
+	class WebexApi {
+		static _WebexApiBaseUrl = "https://webexapis.com/v1/";
+
+		static _bearer = "";
+		static _logger = console;
+
+		// init APIs -----------------------------------------------------------
+
+		static SetBearer(bearer) {
+			this._bearer = bearer;
+		}
+
+		static SetLogger(logger) {
+			this._logger = logger;
+		}
+
+		// Webex APIs -----------------------------------------------------------
+
+		static GetPeople(email, onGetPeopleCallback) {
+			this._logger.debug("WebexApi.GetPeople " + email);
+			var apiUrl = this._WebexApiBaseUrl + "people?email=" + email;
+			var headerAuthorization = "Bearer " + this._bearer;
+			httpGetAsyncWithAuthHeader(apiUrl, headerAuthorization, function(responseText) {
+					var peopleData = JSON.parse(responseText);
+					if (peopleData.items.length > 0) {
+						var people = peopleData.items[0];
+						onGetPeopleCallback(people);
+					}
+				}
+			);
+		}
+	}
+
+	class WebexPeopleWatcher {
+		constructor(onPeopleAddedCallback, onPeopleUpdatedCallback, onPeopleAvailableCallback, onPeopleRemovedCallback, onStatusUpdateCallback, logger = console) {
+			this.onPeopleAddedCallback = onPeopleAddedCallback;
+			this.onPeopleUpdatedCallback = onPeopleUpdatedCallback;
+			this.onPeopleAvailableCallback = onPeopleAvailableCallback;
+			this.onPeopleRemovedCallback = onPeopleRemovedCallback;
+			this.onStatusUpdateCallback = onStatusUpdateCallback;
+			this.logger = logger;
+
+			this.peopleDict = {};
+			this.pollingInterval = 0;
+
+			this._loadFromCookie();
+		}
+
+		// private methods -----------------------------------------------------------
+
+		_updatePeople(email) {
+			var that = this;
+			WebexApi.GetPeople(email, function(people) {
+				var prevStatus = "";
+				var prevPeople = that.peopleDict[email];
+				if (prevPeople) {
+					prevStatus = prevPeople.status;
+				}
+
+				that.peopleDict[email] = people;
+				if (that.onPeopleUpdatedCallback) that.onPeopleUpdatedCallback(people);
+
+				if (prevStatus != "active" && people.status == "active") {
+					if (that.onPeopleAvailableCallback) that.onPeopleAvailableCallback(people);
+				}
+			});
+		}
+
+		_startPollingTimer() {
+			if (this.pollingInterval != 0) {
+				return;
+			}
+
+			var that = this;
+			this.pollingInterval = window.setInterval(function() {
+				for (const email in that.peopleDict) {
+					that._updatePeople(email);
+				}
+			}, 60 * 1000);
+
+			if (this.onStatusUpdateCallback) this.onStatusUpdateCallback("active", "open");
+		}
+
+		_clearPollingTimer() {
+			window.clearInterval(this.pollingInterval);
+			this.pollingInterval = 0;
+
+			if (this.onStatusUpdateCallback) this.onStatusUpdateCallback("inactive", "close");
+		}
+
+		_saveToCookie() {
+			var emailList = Object.keys(this.peopleDict);
+			var json_str = JSON.stringify(emailList);
+			createCookie('emailList', json_str);
+		}
+
+		_loadFromCookie() {
+			var json_str = getCookie('emailList');
+			if (json_str != "") {
+				var emailList = JSON.parse(json_str);
+				for (const email of emailList) {
+					this.addPeople(email);
+				}
+			}
+		}
+
+		// public APIs -----------------------------------------------------------
+
+		addPeople(email) {
+			if (email in this.peopleDict) {
+				return;
+			}
+
+			var that = this;
+			WebexApi.GetPeople(email, function(people) {
+				that.peopleDict[email] = people;
+				if (that.onPeopleAddedCallback) that.onPeopleAddedCallback(people);
+
+				that._saveToCookie();
+
+				if (people.status == "active") {
+					if (that.onPeopleAvailableCallback) that.onPeopleAvailableCallback(people);
+				}
+
+				if (Object.keys(that.peopleDict).length == 1) {
+					that._startPollingTimer();
+				}
+			});
+		}
+
+		removePeople(email) {
+			delete this.peopleDict[email];
+
+			if (this.onPeopleRemovedCallback) this.onPeopleRemovedCallback(email);
+
+			this._saveToCookie();
+
+			if (Object.keys(this.peopleDict).length == 0) {
+				this._clearPollingTimer();
+			}
+		}
+	}
+
+	// ---------------------
+	// UI Tool: Make People HTML
+	// ---------------------
+	class PeopleHtmlMaker {
+		static _PeopleTemplate = `
+			<div class="people" id="{email}">
+				<div class="unWatch"><i class="unWatchIcon fa fa-times-circle-o" onclick="app.webexPeopleWatcher.removePeople('{email}');"></i></div>
+				<div class="avatarArea" onclick="window.location='webexteams://im?email={email}';">
+					{avatarImg}
+					<div class="statusIconArea {status}">{statusIcon}</div>
+				</div>
+				<div class="infoArea">
+					<div class="displayNameArea"><span class="displayName" onclick="window.location='webexteams://im?email={email}';">{displayName}</span></div>
+					<div class="title">{title}</div>
+					<div class="status">{status}</div>
+				</div>
+				<div class="actionsArea">
+					<div class="action chatAction" onclick="window.location='webexteams://im?email={email}';"><i class="actionIcon fa fa-comment"></i></div>
+					<div class="action callAction" onclick="window.location='webextel://{email}';"><i class="actionIcon fa fa-video-camera"></i></div>
+				</div>
+			</div>
+		`;
+		static _NoAvatarHtml = `<i class="noAvatar fa fa-user-circle-o"></i>`;
+		static _AvatarTemplate = `<img class="avatar" src="{avatar}">`;
+		static _StatusIconTemplate = `<i class="statusIcon fa fa-{faIconName}"></i>`;
+
+		static _logger = console;
+
+		static SetLogger(logger) {
+			this._logger = logger;
+		}
+
+		static MakePeopleHtml(people) {
+			// avatar
+			var avatarImg = "";
+			if (people.avatar) {
+				avatarImg = this._AvatarTemplate.replace("{avatar}", people.avatar);
+			} else {
+				avatarImg = this._NoAvatarHtml;
+			}
+
+			// status icon
+			var statusIcon = "";
+			switch (people.status) {
+				case "inactive":
+					statusIcon = this._StatusIconTemplate.replace("{faIconName}", "clock-o");
+					break;
+				case "OutOfOffice":
+					statusIcon = this._StatusIconTemplate.replace("{faIconName}", "plane");
+					break;
+				case "active":
+					statusIcon = "";
+					break;
+				case "meeting":
+					statusIcon = this._StatusIconTemplate.replace("{faIconName}", "video-camera");
+					break;
+				case "call":
+					statusIcon = this._StatusIconTemplate.replace("{faIconName}", "phone");
+					break;
+				case "DoNotDisturb":
+					statusIcon = this._StatusIconTemplate.replace("{faIconName}", "ban");
+					break;
+				case "presenting":
+					statusIcon = this._StatusIconTemplate.replace("{faIconName}", "wifi");
+					break;
+				case "unknown":
+				default:
+					statusIcon = this._StatusIconTemplate.replace("{faIconName}", "moon-o");
+			}
+
+			// peopleHtml
+			return this._PeopleTemplate
+				.replaceAll("{email}", people.emails[0])
+				.replace("{avatarImg}", avatarImg)
+				.replaceAll("{status}", people.status)
+				.replace("{statusIcon}", statusIcon)
+				.replace("{displayName}", people.displayName)
+				.replace("{title}", people.title)
+				;
+		}
+	}
+
+	// ---------------------
+	// UI
+	// ---------------------
+	class UiView {
+		static _WelcomeHtml = `
+			<div class="welcomeIcon"><i class="fa fa-bell-o"></i></div>
+			<div class="welcomeInfo">Get notified when people are available!</div>
+		`;
+		static _WatchingIconHtml = `<i class="fa fa-eye"></i>`;
+		static _NotWatchingIconHtml = `<i class="fa fa-eye-slash"></i>`;
+
+		constructor(onWatchCallback, onLogLevelChangeCallback) {
+			this.onWatchCallback = onWatchCallback;
+			this.onLogLevelChangeCallback = onLogLevelChangeCallback;
+		}
+
+		// private methods -----------------------------------------------------------
+
+		_getPeopleCount() {
+			return document.getElementsByClassName("people").length;
+		}
+
+		_showWelcome() {
+			document.getElementById('contentArea').innerHTML = UiView._WelcomeHtml;
+		}
+
+		_clearContentArea() {
+			document.getElementById('contentArea').innerHTML = "";
+		}
+
+		_prepareMainUiEventHandlers() {
+			var that = this;
+
+			document.getElementById("email").addEventListener("keypress", function(event) {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					document.getElementById("watchBtn").click();
+				}
+			});
+
+			document.getElementById("watchBtn").onclick = function() {
+				var email = document.getElementById("email").value;
+				if (email != "") {
+					if (that.onWatchCallback) that.onWatchCallback(email);
+				}
+			};
+
+			document.getElementById("serverStatusIndicator").onclick = function() {
+				var logArea = document.getElementById('logArea');
+				if (logArea.style.display === "none") {
+					logArea.style.display = "block";
+				} else {
+					logArea.style.display = "none";
+				}
+			};
+
+			document.getElementById("logLevel").onchange = function() {
+				var logLevel = document.getElementById("logLevel").value;
+				if (that.onLogLevelChangeCallback) that.onLogLevelChangeCallback(logLevel);
+			};
+		}
+
+		// public APIs -----------------------------------------------------------
+
+		clearInput() {
+			document.getElementById("email").value = "";
+		}
+
+		setServerMethodAndStatus(serverMethod, serverStatus) {
+			var serverMethodIconHtml = serverMethod == 'active' ? UiView._WatchingIconHtml: UiView._NotWatchingIconHtml;
+			document.getElementById("serverMethod").innerHTML = serverMethodIconHtml;
+
+			document.getElementById("serverStatusIndicator").classList.remove("open", "error", "warning", "close");
+			document.getElementById("serverStatusIndicator").classList.add(serverStatus);
+		}
+
+		setLogLevelList(logLevelList) {
+			var logLevelSelect = document.getElementById("logLevel");
+			for (const logLevelObj of logLevelList) {
+				var option = document.createElement("option");
+				option.value = logLevelObj.logLevel;
+				option.text = logLevelObj.name;
+				logLevelSelect.appendChild(option);
+			}
+		}
+
+		setLogLevel(logLevel) {
+			document.getElementById("logLevel").value = logLevel;
+		}
+
+		log(logMessageClass, msg) {
+			var logMessages = document.getElementById('logMessages');
+			if (logMessages.children.length >= 50) {
+				logMessages.removeChild(
+					logMessages.getElementsByTagName('div')[0]
+				);
+			}
+			
+			var newElement = document.createElement('div');
+			newElement.innerHTML = msg;
+			newElement.classList.add(logMessageClass);
+			logMessages.appendChild(newElement);
+		}
+
+		addPeople(people) {
+			if (this._getPeopleCount() == 0) {
+				this._clearContentArea();
+			}
+
+			var template = document.createElement('template');
+			template.innerHTML = PeopleHtmlMaker.MakePeopleHtml(people);
+			var peopleDiv = template.content.children[0];
+
+			var contentArea = document.getElementById('contentArea');
+			contentArea.appendChild(peopleDiv);
+		}
+
+		updatePeople(people) {
+			var email = people.emails[0];
+			var peopleDiv = document.getElementById(email);
+			peopleDiv.outerHTML = PeopleHtmlMaker.MakePeopleHtml(people);
+		}
+
+		removePeople(email) {
+			var contentArea = document.getElementById('contentArea');
+			var peopleDiv = document.getElementById(email);
+			contentArea.removeChild(peopleDiv);
+
+			if (this._getPeopleCount() == 0) {
+				this._showWelcome();
+			}
+		}
+
+		notifyPeopleIsAvailable(people) {
+			var isShowNotification = false;
+
+			if (!window.Notification) {
+				isShowNotification = false;
+				console.log("!window.Notification");
+			} else {
+				// check if permission is already granted
+				if (Notification.permission === 'granted') {
+					isShowNotification = true;
+				} else {
+					// request permission from user
+					Notification.requestPermission().then(function(p) {
+						if(p === 'granted') {
+							isShowNotification = true;
+						} else {
+							// User blocked notifications
+							isShowNotification = false;
+							console.log("User blocked notifications");
+						}
+					}).catch(function(err) {
+						isShowNotification = false;
+						console.error(err);
+					});
+				}
+			}
+
+			if (isShowNotification) {
+				var notify = new Notification('Alert When Available', {
+					body: people.displayName + " is now available!",
+					icon: people.avatar,
+				});
+			} else {
+				window.setTimeout(function() {
+					window.alert(people.displayName + " is now available!");
+				}, 0.2 * 1000);
+			}
+		}
+
+		start() {
+			this._prepareMainUiEventHandlers();
+			this._showWelcome();
+		}
+	}
+
+	// ---------------------
+	// app
+	// ---------------------
+	class AlertWhenAvailableClientApp {
+		constructor(bearer) {
+			this.bearer = bearer;
+		}
+
+		// callback handlers -----------------------------------------------------------
+
+		_Logger_onLog(logLevelName, msg) {
+			var logMessageClass = logLevelName.toLowerCase();
+			var firstLine = msg.split('\n')[0];
+			this.view.log(logMessageClass, firstLine);
+		}
+
+		_Ui_onWatch(email) {
+			this.view.clearInput();
+
+			if (!email.includes("@")) {
+				email += "@cisco.com";
+			}
+
+			this.webexPeopleWatcher.addPeople(email);
+		}
+
+		_Ui_onLogLevelChange(logLevel) {
+			Logger.SetLogLevel(logLevel);
+		}
+
+		_WebexPeopleWatcher_onPeopleAdded(people) {
+			Logger.info("AlertWhenAvailableClientApp._WebexPeopleWatcher_onPeopleAdded " + people.emails[0]);
+
+			this.view.addPeople(people);
+		}
+
+		_WebexPeopleWatcher_onPeopleUpdated(people) {
+			Logger.info("AlertWhenAvailableClientApp._WebexPeopleWatcher_onPeopleUpdated " + people.emails[0]);
+
+			this.view.updatePeople(people);
+		}
+
+		_WebexPeopleWatcher_onPeopleAvailable(people) {
+			Logger.info("AlertWhenAvailableClientApp._WebexPeopleWatcher_onPeopleAvailable " + people.emails[0]);
+			
+			this.view.notifyPeopleIsAvailable(people);
+		}
+
+		_WebexPeopleWatcher_onPeopleRemoved(email) {
+			Logger.info("AlertWhenAvailableClientApp._WebexPeopleWatcher_onPeopleRemoved " + email);
+
+			this.view.removePeople(email);
+		}
+
+		_WebexPeopleWatcher_onStatusUpdate(method, status) {
+			this.view.setServerMethodAndStatus(method, status);
+		}
+
+		// public APIs -----------------------------------------------------------
+
+		start() {
+			var that = this;
+
+			// init static tools
+			Logger.SetLogCallback(function(logLevelName, msg) {
+				that._Logger_onLog(logLevelName, msg);
+			});
+
+			WebexApi.SetBearer(this.bearer);
+			WebexApi.SetLogger(Logger);
+
+			// create modules
+			this.view = new UiView(function(email) {
+				that._Ui_onWatch(email);
+			}, function(logLevel) {
+				that._Ui_onLogLevelChange(logLevel);
+			});
+
+			this.webexPeopleWatcher = new WebexPeopleWatcher(
+				function(people) {
+					that._WebexPeopleWatcher_onPeopleAdded(people);
+				},
+				function(people) {
+					that._WebexPeopleWatcher_onPeopleUpdated(people);
+				},
+				function(people) {
+					that._WebexPeopleWatcher_onPeopleAvailable(people);
+				},
+				function(email) {
+					that._WebexPeopleWatcher_onPeopleRemoved(email);
+				},
+				function(method, status) {
+					that._WebexPeopleWatcher_onStatusUpdate(method, status);
+				},
+				Logger
+			);
+			
+			// some preparing work
+			this.view.setLogLevelList(Logger.GetLogLevelList());
+			this.view.setLogLevel(Logger.GetLogLevel());
+			this.view.start();
+		}
+	}
+
+	// ---------------------
+	// HTML start
+	// ---------------------
+	window.onload = function() {
+		// public parameters
+		var Bearer = findGetParameter("Bearer");
+
+		// start app with parameters
+		if (Bearer == "") {
+			window.alert("Make sure that Bearer parameter is not empty!");
+		} else {
+			var app = new AlertWhenAvailableClientApp(Bearer);
+			app.start();
+		
+			window.app = app;
+		}
+	};
+</script>
+<style>
+	:root {
+		--main-bg-color: #154f85;
+		--main-text-color: black;
+		
+		--text-light-color: white;
+		--text-color-grey: grey;
+		
+		--button-bg-color: white;
+		--button-highlight-bg-color: #121F3C;
+		
+		--indicator-color-grey: grey;
+		--indicator-color-red: red;
+		--indicator-color-yellow: yellow;
+		--indicator-color-green: green;
+
+		--content-bg-color: white;
+
+		--people-bg-color: #F1F2F5;
+		--unwatch-button-color: grey;
+		--unwatch-button-highlight-color: red;
+		--avatar-border-color: #80808042;
+		--no-avatar-color-grey: #999999;
+
+		--status-color-grey: grey;
+		--status-color-orange: orange;
+		--status-color-green: green;
+		--status-color-red: #ff6256;
+
+		--action-button-color-blue: #2196F3;
+		--action-button-color-green: #009672;
+
+		--log-bg-color: #282828e6;
+		--log-text-color-red: rgb(240 125 125);
+		--log-text-color-yellow: rgb(233 204 142);
+		--log-text-color-lime: rgb(98 196 240);
+		--log-text-color-blue: rgb(13 134 255);
+	}
+	body {
+		background-color: var(--main-bg-color);
+		font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Noto Sans,Ubuntu,Droid Sans,Helvetica Neue,sans-serif;
+	}
+	a {
+		color: var(--main-text-color);
+	}
+	#main {
+		display: flex;
+		flex-direction: column;
+		height: 97vh;
+	}
+	#topBar {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-left: 6px;
+		margin-right: 6px;
+	}
+	#logo {
+		margin-top: 3px;
+	}
+	#logoImg {
+		width: 18px;
+		height: 18px;
+	}
+	#cecWatchMgr {
+		text-align: center;
+	}
+	.keyInput {
+		border-radius: 4px;
+		border: none;
+		height: 18px;
+	}
+	.actionBtn {
+		border-radius: 4px;
+		border: none;
+		background-color: var(--button-bg-color);
+		cursor: pointer;
+		height: 18px;
+	}
+	#serverStatus {
+		color: var(--text-light-color);
+		font-size: smaller;
+	}
+	#serverStatusIndicator {
+		background-color: var(--indicator-color-grey);
+		border-radius: 50%;
+		width: 10px;
+		height: 10px;
+		display: inline-block;
+		cursor: pointer;
+	}
+	#serverStatusIndicator.open {
+		background-color: var(--indicator-color-green);
+	}
+	#serverStatusIndicator.warning {
+		background-color: var(--indicator-color-yellow);
+	}
+	#serverStatusIndicator.error {
+		background-color: var(--indicator-color-red);
+	}
+	#serverStatusIndicator.close {
+		background-color: var(--indicator-color-grey);
+	}
+	#contentArea {
+		margin-top: 4px;
+		flex-grow: 1;
+		border-radius: 6px;
+		margin-left: -6px;
+		margin-right: -6px;
+		overflow: auto;
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+	.welcomeIcon {
+		margin-top: 128px;
+		text-align: center;
+		font-size: 128px;
+		color: var(--text-light-color);
+	}
+	.welcomeInfo {
+		color: var(--text-light-color);
+		text-align: center;
+		font-size: large;
+	}
+	.people {
+		border-radius: 6px;
+		background-color: var(--people-bg-color);
+		padding-left: 12px;
+		padding-right: 12px;
+		padding-top: 10px;
+		padding-bottom: 6px;
+		display: flex;
+		flex-direction: row;
+		height: 72px;
+	}
+	.people + .people {
+		margin-top: 6px;
+	}
+	.unWatch {
+		width: 14px;
+		margin-left: -10px;
+		margin-top: -11px;
+		visibility: hidden;
+	}
+	.unWatchIcon {
+		color: var(--unwatch-button-color);
+		z-index: 100;
+		cursor: crosshair;
+	}
+	.unWatchIcon:hover {
+		color: var(--unwatch-button-highlight-color);
+	}
+	.people:hover .unWatch {
+		visibility: visible;
+	}
+	.avatarArea {
+		margin-left: -4px;
+		cursor: pointer;
+	}
+	.avatar {
+		width: 64px;
+		height: 64px;
+		border-radius: 50%;
+		border: 2px solid var(--avatar-border-color);
+	}
+	.noAvatar {
+		width: 64px;
+		height: 64px;
+		font-size: 64px;
+		color: var(--no-avatar-color-grey);
+		border-radius: 50%;
+		border: 2px solid var(--avatar-border-color);
+	}
+	.statusIconArea {
+		width: 24px;
+		height: 24px;
+		position: relative;
+		top: -30px;
+		left: 46px;
+		background-color: var(--status-color-grey);
+		border-radius: 50%;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+	.statusIconArea.inactive {
+		background-color: var(--status-color-grey);
+	}
+	.statusIconArea.OutOfOffice {
+		background-color: var(--status-color-grey);
+	}
+	.statusIconArea.active {
+		background-color: var(--status-color-green);
+	}
+	.statusIconArea.meeting {
+		background-color: var(--status-color-orange);
+	}
+	.statusIconArea.call {
+		background-color: var(--status-color-orange);
+	}
+	.statusIconArea.DoNotDisturb {
+		background-color: var(--status-color-red);
+	}
+	.statusIconArea.presenting {
+		background-color: var(--status-color-red);
+	}
+	.statusIcon {
+		width: 18px;
+		height: 18px;
+		font-size: 18px;
+		margin-left: 2px;
+		color: var(--text-light-color);
+	}
+	.statusIcon.fa-video-camera {
+		width: 14px;
+		height: 14px;
+		font-size: 14px;
+		margin-left: 0px;
+	}
+	.statusIcon.fa-wifi {
+		width: 14px;
+		height: 14px;
+		font-size: 14px;
+		margin-left: -2px;
+	}
+	.infoArea {
+		margin-left: 12px;
+		flex-grow: 1;
+	}
+	.displayName {
+		font-weight: bold;
+		font-size: larger;
+		cursor: pointer;
+	}
+	.title {
+		font-size: medium;
+		color: var(--text-color-grey);
+		margin-top: 2px;
+	}
+	.status {
+		font-size: medium;
+		margin-top: 4px;
+	}
+	.actionsArea {
+		display: flex;
+		flex-direction: row;
+		padding-top: 10px;
+	}
+	.action {
+		width: 48px;
+		height: 48px;
+		border-radius: 50%;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		cursor: pointer;
+	}
+	.action.chatAction {
+		color: var(--action-button-color-blue);
+		border: 1px solid var(--action-button-color-blue);
+	}
+	.action.callAction {
+		color: var(--action-button-color-green);
+		border: 1px solid var(--action-button-color-green);
+	}
+	.action.chatAction:hover {
+		color: var(--text-light-color);
+		background-color: var(--action-button-color-blue);
+	}
+	.action.callAction:hover {
+		color: var(--text-light-color);
+		background-color: var(--action-button-color-green);
+	}
+	.action + .action {
+		margin-left: 8px;
+	}
+	.actionIcon {
+		width: 24px;
+		height: 24px;
+		font-size: 24px;
+	}
+	#logArea {
+		color: var(--text-light-color);
+		position: fixed;
+		background-color: var(--log-bg-color);
+		left: 0px;
+		top: 36px;
+		width: 100%;
+		height: 92%;
+		font-size: x-small;
+	}
+	#logArea a {
+		color: var(--text-light-color);
+	}
+	#logLevelControl {
+		position: absolute;
+		top: 10px;
+		right: 8px;
+	}
+	#logMessages {
+		margin-left: 8px;
+		margin-right: 12px;
+		height: 90%;
+		overflow-y: scroll;
+	}
+	#logMessages > .log {
+		color: var(--text-light-color);
+	}
+	#logMessages > .error {
+		color: var(--log-text-color-red);
+	}
+	#logMessages > .warning {
+		color: var(--log-text-color-yellow);
+	}
+	#logMessages > .info {
+		color: var(--log-text-color-lime);
+	}
+	#logMessages > .debug {
+		color: var(--log-text-color-blue);
+	}
+</style>
+</head>
+<body>
+	<div id="main">
+		<div id="topBar">
+			<div id="logo">
+				<img id="logoImg" src="icon.png">
+			</div>
+			<div id="cecWatchMgr">
+				<input type="text" id="email" class="keyInput" placeholder="CEC-ID or email to watch" size="24" autofocus>
+				<input type="button" id="watchBtn" class="actionBtn" value="Watch" title="Watch">
+			</div>
+			<div id="serverStatus">
+				<span id="serverMethod"></span>
+				<span id="serverStatusIndicator"></span>
+			</div>
+		</div>
+		<div id="contentArea"></div>
+	</div>
+	<div id="logArea" style="display: none;">
+		<h2>Log</h2>
+		<div id="logLevelControl">
+			Level:
+			<select id="logLevel"></select>
+		</div>
+		<div id="logMessages"></div>
+	</div>
+</body>
+</html>
