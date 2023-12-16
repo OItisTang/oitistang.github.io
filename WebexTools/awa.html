@@ -10,11 +10,15 @@
 	// ---------------------
 	// vendor
 	// ---------------------
-	function httpGetAsyncWithAuthHeader(theUrl, headerAuthorization, callback = null) {
+	function httpGetAsyncWithAuthHeader(theUrl, headerAuthorization, successCallback, errorCallback) {
 		var xmlHttp = new XMLHttpRequest();
 		xmlHttp.onreadystatechange = function() {
-			if (callback && xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-				callback(xmlHttp.responseText);
+			if (xmlHttp.readyState == 4) {
+				if (xmlHttp.status == 200) {
+					successCallback(xmlHttp.responseText);
+				} else {
+					errorCallback(xmlHttp.status, xmlHttp.statusText);
+				}
 			}
 		}
 		xmlHttp.open("GET", theUrl, true); // true for asynchronous
@@ -68,13 +72,13 @@
 	class WebexApi {
 		static _WebexApiBaseUrl = "https://webexapis.com/v1/";
 
-		static _bearer = "";
+		static _accessToken = "";
 		static _logger = console;
 
 		// init APIs -----------------------------------------------------------
 
-		static SetBearer(bearer) {
-			this._bearer = bearer;
+		static SetAccessToken(accessToken) {
+			this._accessToken = accessToken;
 		}
 
 		static SetLogger(logger) {
@@ -83,15 +87,26 @@
 
 		// Webex APIs -----------------------------------------------------------
 
-		static GetPeople(email, onGetPeopleCallback) {
+		static GetPeople(email, onGetPeopleCallback, onUnauthorizedCallback) {
 			this._logger.debug("WebexApi.GetPeople " + email);
+			var that = this;
 			var apiUrl = this._WebexApiBaseUrl + "people?email=" + email;
-			var headerAuthorization = "Bearer " + this._bearer;
-			httpGetAsyncWithAuthHeader(apiUrl, headerAuthorization, function(responseText) {
+			var headerAuthorization = "Bearer " + this._accessToken;
+			httpGetAsyncWithAuthHeader(apiUrl, headerAuthorization,
+				function(responseText) {
 					var peopleData = JSON.parse(responseText);
 					if (peopleData.items.length > 0) {
 						var people = peopleData.items[0];
 						onGetPeopleCallback(people);
+					}
+				},
+				function(status, statusText) {
+					that._logger.error("WebexApi.GetPeople "
+							+ "http request failed - "
+							+ "status: " + status + ", "
+							+ "statusText: " + statusText);
+					if (status == 401) {
+						onUnauthorizedCallback();
 					}
 				}
 			);
@@ -99,11 +114,12 @@
 	}
 
 	class WebexPeopleWatcher {
-		constructor(onPeopleAddedCallback, onPeopleUpdatedCallback, onPeopleAvailableCallback, onPeopleRemovedCallback, onStatusUpdateCallback, logger = console) {
+		constructor(onPeopleAddedCallback, onPeopleUpdatedCallback, onPeopleAvailableCallback, onPeopleRemovedCallback, onUnauthorizedCallback, onStatusUpdateCallback, logger = console) {
 			this.onPeopleAddedCallback = onPeopleAddedCallback;
 			this.onPeopleUpdatedCallback = onPeopleUpdatedCallback;
 			this.onPeopleAvailableCallback = onPeopleAvailableCallback;
 			this.onPeopleRemovedCallback = onPeopleRemovedCallback;
+			this.onUnauthorizedCallback = onUnauthorizedCallback;
 			this.onStatusUpdateCallback = onStatusUpdateCallback;
 			this.logger = logger;
 
@@ -117,20 +133,27 @@
 
 		_updatePeople(email) {
 			var that = this;
-			WebexApi.GetPeople(email, function(people) {
-				var prevStatus = "";
-				var prevPeople = that.peopleDict[email];
-				if (prevPeople) {
-					prevStatus = prevPeople.status;
-				}
+			WebexApi.GetPeople(email,
+				function(people) {
+					var prevStatus = "";
+					var prevPeople = that.peopleDict[email];
+					if (prevPeople) {
+						prevStatus = prevPeople.status;
+					}
 
-				that.peopleDict[email] = people;
-				if (that.onPeopleUpdatedCallback) that.onPeopleUpdatedCallback(people);
+					that.peopleDict[email] = people;
+					if (that.onPeopleUpdatedCallback) that.onPeopleUpdatedCallback(people);
 
-				if (prevStatus != "active" && people.status == "active") {
-					if (that.onPeopleAvailableCallback) that.onPeopleAvailableCallback(people);
+					if (prevStatus != "active" && people.status == "active") {
+						if (that.onPeopleAvailableCallback) that.onPeopleAvailableCallback(people);
+					}
+				},
+				function() {
+					that._clearPollingTimer();
+					if (that.onStatusUpdateCallback) that.onStatusUpdateCallback("inactive", "error");
+					if (that.onUnauthorizedCallback) that.onUnauthorizedCallback();
 				}
-			});
+			);
 		}
 
 		_startPollingTimer() {
@@ -179,20 +202,27 @@
 			}
 
 			var that = this;
-			WebexApi.GetPeople(email, function(people) {
-				that.peopleDict[email] = people;
-				if (that.onPeopleAddedCallback) that.onPeopleAddedCallback(people);
+			WebexApi.GetPeople(email,
+				function(people) {
+					that.peopleDict[email] = people;
+					if (that.onPeopleAddedCallback) that.onPeopleAddedCallback(people);
 
-				that._saveToCookie();
+					that._saveToCookie();
 
-				if (people.status == "active") {
-					if (that.onPeopleAvailableCallback) that.onPeopleAvailableCallback(people);
+					if (people.status == "active") {
+						if (that.onPeopleAvailableCallback) that.onPeopleAvailableCallback(people);
+					}
+
+					if (Object.keys(that.peopleDict).length == 1) {
+						that._startPollingTimer();
+					}
+				},
+				function() {
+					that._clearPollingTimer();
+					if (that.onStatusUpdateCallback) that.onStatusUpdateCallback("inactive", "error");
+					if (that.onUnauthorizedCallback) that.onUnauthorizedCallback();
 				}
-
-				if (Object.keys(that.peopleDict).length == 1) {
-					that._startPollingTimer();
-				}
-			});
+			);
 		}
 
 		removePeople(email) {
@@ -285,8 +315,7 @@
 				.replaceAll("{status}", people.status)
 				.replace("{statusIcon}", statusIcon)
 				.replace("{displayName}", people.displayName)
-				.replace("{title}", people.title)
-				;
+				.replace("{title}", people.title);
 		}
 	}
 
@@ -295,8 +324,12 @@
 	// ---------------------
 	class UiView {
 		static _WelcomeHtml = `
-			<div class="welcomeIcon"><i class="fa fa-bell-o"></i></div>
-			<div class="welcomeInfo">Get notified when people are available!</div>
+			<div class="bigInfoIcon"><i class="fa fa-bell-o"></i></div>
+			<div class="bigInfoMsg">Get notified when people are available!</div>
+		`;
+		static _ReauthenticateHtml = `
+			<div class="bigInfoIcon"><i class="fa fa-refresh"></i></div>
+			<div class="bigInfoMsg"><a href="">Click here to re-authenticate!</a></div>
 		`;
 		static _WatchingIconHtml = `<i class="fa fa-eye"></i>`;
 		static _NotWatchingIconHtml = `<i class="fa fa-eye-slash"></i>`;
@@ -423,7 +456,7 @@
 			}
 		}
 
-		notifyPeopleIsAvailable(people) {
+		showNotification(msg, icon) {
 			var isShowNotification = false;
 
 			if (!window.Notification) {
@@ -452,14 +485,18 @@
 
 			if (isShowNotification) {
 				var notify = new Notification('Alert When Available', {
-					body: people.displayName + " is now available!",
-					icon: people.avatar,
+					body: msg,
+					icon: icon,
 				});
 			} else {
 				window.setTimeout(function() {
-					window.alert(people.displayName + " is now available!");
+					window.alert(msg);
 				}, 0.2 * 1000);
 			}
+		}
+
+		showReauthenticate() {
+			document.getElementById('contentArea').innerHTML = UiView._ReauthenticateHtml;
 		}
 
 		start() {
@@ -472,8 +509,55 @@
 	// app
 	// ---------------------
 	class AlertWhenAvailableClientApp {
-		constructor(bearer) {
-			this.bearer = bearer;
+		constructor() {
+			this._accessToken = "";
+		}
+
+		// private functions -----------------------------------------------------------
+
+		_saveAuthDataFromUrl() {
+			var authParam = findGetParameter('auth');
+			if (authParam != '') {
+				var auth = JSON.parse(authParam);
+
+				createCookie('access_token', auth.access_token);
+				createCookie('expires_in', auth.expires_in);
+				createCookie('refresh_token', auth.refresh_token);
+				createCookie('refresh_token_expires_in', auth.refresh_token_expires_in);
+				createCookie('scope', auth.scope);
+				createCookie('token_type', auth.token_type);
+
+				// clear 'auth' param from URL
+				window.history.replaceState(null, null, window.location.pathname);
+			}
+		}
+
+		_clearAuthData() {
+			createCookie('access_token', '');
+			createCookie('expires_in', '');
+			createCookie('refresh_token', '');
+			createCookie('refresh_token_expires_in', '');
+			createCookie('scope', '');
+			createCookie('token_type', '');
+		}
+
+		_retrieveAccessToken() {
+			var accessToken = getCookie('access_token');
+			if (accessToken != '') {
+				this._accessToken = accessToken;
+			} else {
+				this._kickStart();
+			}
+		}
+
+		_kickStart() {
+			var kickStartUrl = 'https://webexapis.com/v1/authorize?'
+							+ 'client_id=C09fd3e9476b43867efe646c90f4fe011934fb92904b13bd4d0073258fcef1306'
+							+ '&response_type=code'
+							+ '&redirect_uri=http%3A%2F%2F' + encodeURIComponent(window.location.hostname) + '%3A8080%2Fawa-oauth%2Fawa-oauth.php'
+							+ '&scope=spark%3Akms%20spark%3Apeople_read'
+							+ '&state=' + window.location.href;
+			window.location.replace(kickStartUrl);
 		}
 
 		// callback handlers -----------------------------------------------------------
@@ -513,13 +597,19 @@
 		_WebexPeopleWatcher_onPeopleAvailable(people) {
 			Logger.info("AlertWhenAvailableClientApp._WebexPeopleWatcher_onPeopleAvailable " + people.emails[0]);
 			
-			this.view.notifyPeopleIsAvailable(people);
+			this.view.showNotification(people.displayName + " is now available!", people.avatar);
 		}
 
 		_WebexPeopleWatcher_onPeopleRemoved(email) {
 			Logger.info("AlertWhenAvailableClientApp._WebexPeopleWatcher_onPeopleRemoved " + email);
 
 			this.view.removePeople(email);
+		}
+
+		_WebexPeopleWatcher_onUnauthorized() {
+			this._clearAuthData();
+			this.view.showReauthenticate();
+			this.view.showNotification("Access token expired, please re-authenticate!");
 		}
 
 		_WebexPeopleWatcher_onStatusUpdate(method, status) {
@@ -531,12 +621,16 @@
 		start() {
 			var that = this;
 
+			// oAuth
+			this._saveAuthDataFromUrl();
+			this._retrieveAccessToken();
+
 			// init static tools
 			Logger.SetLogCallback(function(logLevelName, msg) {
 				that._Logger_onLog(logLevelName, msg);
 			});
 
-			WebexApi.SetBearer(this.bearer);
+			WebexApi.SetAccessToken(this._accessToken);
 			WebexApi.SetLogger(Logger);
 
 			// create modules
@@ -559,6 +653,9 @@
 				function(email) {
 					that._WebexPeopleWatcher_onPeopleRemoved(email);
 				},
+				function() {
+					that._WebexPeopleWatcher_onUnauthorized();
+				},
 				function(method, status) {
 					that._WebexPeopleWatcher_onStatusUpdate(method, status);
 				},
@@ -576,18 +673,9 @@
 	// HTML start
 	// ---------------------
 	window.onload = function() {
-		// public parameters
-		var Bearer = findGetParameter("Bearer");
-
-		// start app with parameters
-		if (Bearer == "") {
-			window.alert("Make sure that Bearer parameter is not empty!");
-		} else {
-			var app = new AlertWhenAvailableClientApp(Bearer);
-			app.start();
-		
-			window.app = app;
-		}
+		var app = new AlertWhenAvailableClientApp();
+		app.start();
+		window.app = app;
 	};
 </script>
 <style>
@@ -704,16 +792,19 @@
 		padding-left: 16px;
 		padding-right: 16px;
 	}
-	.welcomeIcon {
+	.bigInfoIcon {
 		margin-top: 128px;
 		text-align: center;
 		font-size: 128px;
 		color: var(--text-light-color);
 	}
-	.welcomeInfo {
+	.bigInfoMsg {
 		color: var(--text-light-color);
 		text-align: center;
 		font-size: large;
+	}
+	.bigInfoMsg a {
+		color: var(--text-light-color);
 	}
 	.people {
 		border-radius: 6px;
