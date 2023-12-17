@@ -356,6 +356,15 @@
 		_prepareMainUiEventHandlers() {
 			var that = this;
 
+			document.getElementById("logo").onclick = function() {
+				var howtoArea = document.getElementById('howtoArea');
+				if (howtoArea.style.display === "none") {
+					howtoArea.style.display = "block";
+				} else {
+					howtoArea.style.display = "none";
+				}
+			};
+
 			document.getElementById("email").addEventListener("keypress", function(event) {
 				if (event.key === "Enter") {
 					event.preventDefault();
@@ -743,6 +752,7 @@
 	}
 	#logo {
 		margin-top: 3px;
+		cursor: pointer;
 	}
 	#logoImg {
 		width: 18px;
@@ -987,7 +997,7 @@
 		height: 24px;
 		font-size: 24px;
 	}
-	#logArea {
+	#howtoArea {
 		color: var(--text-light-color);
 		position: fixed;
 		background-color: var(--log-bg-color);
@@ -996,6 +1006,19 @@
 		width: 100%;
 		height: 92%;
 		font-size: x-small;
+	}
+	#howtoContent {
+		margin: 30px 60px 30px 60px;
+		font-size: large;
+	}
+	#logArea {
+		color: var(--text-light-color);
+		position: fixed;
+		background-color: var(--log-bg-color);
+		left: 0px;
+		top: 36px;
+		width: 100%;
+		height: 92%;
 	}
 	#logArea a {
 		color: var(--text-light-color);
@@ -1044,6 +1067,27 @@
 			</div>
 		</div>
 		<div id="contentArea"></div>
+	</div>
+	<div id="howtoArea" style="display: none;">
+		<div id="howtoContent">
+			<h3>Alert When Available - AWA</h3>
+			<p>
+				first time, please input a valid email,<br>
+				upon successfully adding one people, the email domain will be remembered for the next time use.<br>
+			</p>
+			<p>
+				this app uses cookie to save app's state, please allow this site to use cookie.<br>
+			</p>
+			<p>
+				recommended browser on macOS: MenubarX.app<br>
+				recommended settings in "Window Options":<br>
+				- Window Size: Desktop Mini<br>
+				- Hide Address Bar<br>
+			</p>
+			<p>
+				or, you can use some Chrome extension like "TabFloater" to make this web app into an app-like standalone window.<br>
+			</p>
+		</div>
 	</div>
 	<div id="logArea" style="display: none;">
 		<h2>Log</h2>
