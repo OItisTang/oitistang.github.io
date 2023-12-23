@@ -10,6 +10,17 @@
 	// ---------------------
 	// vendor
 	// ---------------------
+	function httpGetAsync(theUrl, callback = null) {
+		var xmlHttp = new XMLHttpRequest();
+		xmlHttp.onreadystatechange = function() {
+			if (callback && xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+				callback(xmlHttp.responseText);
+			}
+		}
+		xmlHttp.open("GET", theUrl, true); // true for asynchronous
+		xmlHttp.send(null);
+	}
+
 	function httpGetAsyncWithAuthHeader(theUrl, headerAuthorization, successCallback, errorCallback) {
 		var xmlHttp = new XMLHttpRequest();
 		xmlHttp.onreadystatechange = function() {
@@ -87,7 +98,7 @@
 
 		// Webex APIs -----------------------------------------------------------
 
-		static GetPeople(email, onGetPeopleCallback, onUnauthorizedCallback) {
+		static GetPeople(email, onGetPeopleCallback, onE401Callback) {
 			this._logger.debug("WebexApi.GetPeople " + email);
 			var that = this;
 			var apiUrl = this._WebexApiBaseUrl + "people?email=" + email;
@@ -106,7 +117,7 @@
 							+ "status: " + status + ", "
 							+ "statusText: " + statusText);
 					if (status == 401) {
-						onUnauthorizedCallback();
+						onE401Callback();
 					}
 				}
 			);
@@ -114,19 +125,18 @@
 	}
 
 	class WebexPeopleWatcher {
-		constructor(onPeopleAddedCallback, onPeopleUpdatedCallback, onPeopleAvailableCallback, onPeopleRemovedCallback, onUnauthorizedCallback, onStatusUpdateCallback, logger = console) {
+		constructor(onPeopleAddedCallback, onPeopleUpdatedCallback, onPeopleAvailableCallback, onPeopleRemovedCallback, onAccessTokenInvalidCallback, onStatusUpdateCallback, logger = console) {
 			this.onPeopleAddedCallback = onPeopleAddedCallback;
 			this.onPeopleUpdatedCallback = onPeopleUpdatedCallback;
 			this.onPeopleAvailableCallback = onPeopleAvailableCallback;
 			this.onPeopleRemovedCallback = onPeopleRemovedCallback;
-			this.onUnauthorizedCallback = onUnauthorizedCallback;
+			this.onAccessTokenInvalidCallback = onAccessTokenInvalidCallback;
 			this.onStatusUpdateCallback = onStatusUpdateCallback;
 			this.logger = logger;
 
 			this.peopleDict = {};
 			this.pollingInterval = 0;
-
-			this._loadFromCookie();
+			this.isStopped = true;
 		}
 
 		// private methods -----------------------------------------------------------
@@ -149,9 +159,9 @@
 					}
 				},
 				function() {
-					that._clearPollingTimer();
-					if (that.onStatusUpdateCallback) that.onStatusUpdateCallback("inactive", "error");
-					if (that.onUnauthorizedCallback) that.onUnauthorizedCallback();
+					that.logger.warn("WebexPeopleWatcher._updatePeople failed to update " + email);
+					if (that.onStatusUpdateCallback) that.onStatusUpdateCallback("inactive", "warning");
+					if (that.onAccessTokenInvalidCallback) that.onAccessTokenInvalidCallback();
 				}
 			);
 		}
@@ -172,6 +182,10 @@
 		}
 
 		_clearPollingTimer() {
+			if (this.pollingInterval == 0) {
+				return;
+			}
+
 			window.clearInterval(this.pollingInterval);
 			this.pollingInterval = 0;
 
@@ -197,6 +211,8 @@
 		// public APIs -----------------------------------------------------------
 
 		addPeople(email) {
+			if (this.isStopped) return;
+
 			if (email in this.peopleDict) {
 				return;
 			}
@@ -218,14 +234,16 @@
 					}
 				},
 				function() {
-					that._clearPollingTimer();
-					if (that.onStatusUpdateCallback) that.onStatusUpdateCallback("inactive", "error");
-					if (that.onUnauthorizedCallback) that.onUnauthorizedCallback();
+					that.logger.warn("WebexPeopleWatcher.addPeople failed to add " + email);
+					if (that.onStatusUpdateCallback) that.onStatusUpdateCallback("inactive", "warning");
+					if (that.onAccessTokenInvalidCallback) that.onAccessTokenInvalidCallback();
 				}
 			);
 		}
 
 		removePeople(email) {
+			if (this.isStopped) return;
+
 			delete this.peopleDict[email];
 
 			if (this.onPeopleRemovedCallback) this.onPeopleRemovedCallback(email);
@@ -235,6 +253,23 @@
 			if (Object.keys(this.peopleDict).length == 0) {
 				this._clearPollingTimer();
 			}
+		}
+
+		start() {
+			this.isStopped = false;
+			this._loadFromCookie();
+		}
+
+		stop() {
+			this._clearPollingTimer();
+			this.isStopped = true;
+		}
+
+		resume() {
+			if (Object.keys(this.peopleDict).length > 0) {
+				this._startPollingTimer();
+			}
+			this.isStopped = false;
 		}
 	}
 
@@ -515,29 +550,53 @@
 	}
 
 	// ---------------------
-	// app
+	// oAuth
 	// ---------------------
-	class AlertWhenAvailableClientApp {
-		constructor() {
-			this._accessToken = "";
+	class Authentication {
+		static _AuthUrl = "http://149.28.204.205:8080/awa-oauth/awa-oauth.php";
+
+		constructor(onTokenRefreshedCallback, onRefreshTokenExpireCallback, logger = console) {
+			this.onTokenRefreshedCallback = onTokenRefreshedCallback;
+			this.onRefreshTokenExpireCallback = onRefreshTokenExpireCallback;
+			this.logger = logger;
+			this.refreshTimeout = 0;
 		}
 
 		// private functions -----------------------------------------------------------
+
+		_kickStart() {
+			var kickStartUrl = 'https://webexapis.com/v1/authorize?'
+							+ 'client_id=C09fd3e9476b43867efe646c90f4fe011934fb92904b13bd4d0073258fcef1306'
+							+ '&response_type=code'
+							+ '&redirect_uri=' + encodeURIComponent(Authentication._AuthUrl)
+							+ '&scope=' + encodeURIComponent("spark:kms spark:people_read")
+							+ '&state=' + window.location.href;
+			window.location.replace(kickStartUrl);
+		}
+
+		_saveAuthData(auth) {
+			createCookie('access_token', auth.access_token);
+			createCookie('expires_in', auth.expires_in);
+			createCookie('refresh_token', auth.refresh_token);
+			createCookie('refresh_token_expires_in', auth.refresh_token_expires_in);
+			createCookie('scope', auth.scope);
+			createCookie('token_type', auth.token_type);
+		}
 
 		_saveAuthDataFromUrl() {
 			var authParam = findGetParameter('auth');
 			if (authParam != '') {
 				var auth = JSON.parse(authParam);
-
-				createCookie('access_token', auth.access_token);
-				createCookie('expires_in', auth.expires_in);
-				createCookie('refresh_token', auth.refresh_token);
-				createCookie('refresh_token_expires_in', auth.refresh_token_expires_in);
-				createCookie('scope', auth.scope);
-				createCookie('token_type', auth.token_type);
+				this._saveAuthData(auth);
 
 				// clear 'auth' param from URL
 				window.history.replaceState(null, null, window.location.pathname);
+			}
+		}
+
+		_checkAccessToken() {
+			if (getCookie('access_token') == '') {
+				this._kickStart();
 			}
 		}
 
@@ -550,23 +609,51 @@
 			createCookie('token_type', '');
 		}
 
-		_retrieveAccessToken() {
-			var accessToken = getCookie('access_token');
-			if (accessToken != '') {
-				this._accessToken = accessToken;
-			} else {
-				this._kickStart();
-			}
+		// public APIs -----------------------------------------------------------
+
+		prepare() {
+			this._saveAuthDataFromUrl();
+			this._checkAccessToken();
 		}
 
-		_kickStart() {
-			var kickStartUrl = 'https://webexapis.com/v1/authorize?'
-							+ 'client_id=C09fd3e9476b43867efe646c90f4fe011934fb92904b13bd4d0073258fcef1306'
-							+ '&response_type=code'
-							+ '&redirect_uri=http%3A%2F%2F149.28.204.205%3A8080%2Fawa-oauth%2Fawa-oauth.php'
-							+ '&scope=spark%3Akms%20spark%3Apeople_read'
-							+ '&state=' + window.location.href;
-			window.location.replace(kickStartUrl);
+		getAccessToken() {
+			return getCookie('access_token');
+		}
+
+		refreshAccessToken() {
+			var that = this;
+
+			if (this.refreshTimeout != 0) {
+				window.clearTimeout(this.refreshTimeout);
+			}
+
+			this.refreshTimeout = window.setTimeout(function() {
+				var apiUrl = Authentication._AuthUrl + "?refresh_token=" + getCookie('refresh_token');
+				httpGetAsync(apiUrl, function(responseText) {
+						var responseData = JSON.parse(responseText);
+						if (responseData.error) {
+							that.logger.error("Authentication.refreshAccessToken [" + responseData.error + "]");
+							if (that.onRefreshTokenExpireCallback) that.onRefreshTokenExpireCallback();
+						} else {
+							that.logger.info("Authentication.refreshAccessToken successfully refreshed tokens.");
+							that._saveAuthData(responseData);
+							if (that.onTokenRefreshedCallback) that.onTokenRefreshedCallback();
+						}
+					}
+				);
+			}, 5 * 1000);
+		}
+
+		clear() {
+			this._clearAuthData();
+		}
+	}
+
+	// ---------------------
+	// app
+	// ---------------------
+	class AlertWhenAvailableClientApp {
+		constructor() {
 		}
 
 		// callback handlers -----------------------------------------------------------
@@ -619,14 +706,27 @@
 			this.view.removePeople(email);
 		}
 
-		_WebexPeopleWatcher_onUnauthorized() {
-			this._clearAuthData();
-			this.view.showReauthenticate();
-			this.view.showNotification("Access token expired, please re-authenticate!");
+		_WebexPeopleWatcher_onAccessTokenInvalid() {
+			this.webexPeopleWatcher.stop();
+			this.authentication.refreshAccessToken();
 		}
 
 		_WebexPeopleWatcher_onStatusUpdate(method, status) {
 			this.view.setServerMethodAndStatus(method, status);
+		}
+
+		_Authentication_onTokenRefreshed() {
+			WebexApi.SetAccessToken(this.authentication.getAccessToken());
+			this.webexPeopleWatcher.resume();
+		}
+
+		_Authentication_onRefreshTokenExpire() {
+			this.authentication.clear();
+
+			this.view.setServerMethodAndStatus("", "error");
+
+			this.view.showReauthenticate();
+			this.view.showNotification("Refresh token expired, please re-authenticate!");
 		}
 
 		// public APIs -----------------------------------------------------------
@@ -634,24 +734,20 @@
 		start() {
 			var that = this;
 
-			// oAuth
-			this._saveAuthDataFromUrl();
-			this._retrieveAccessToken();
-
-			// init static tools
+			// prepare
 			Logger.SetLogCallback(function(logLevelName, msg) {
 				that._Logger_onLog(logLevelName, msg);
 			});
 
-			WebexApi.SetAccessToken(this._accessToken);
 			WebexApi.SetLogger(Logger);
 
-			// create modules
 			this.view = new UiView(function(email) {
 				that._Ui_onWatch(email);
 			}, function(logLevel) {
 				that._Ui_onLogLevelChange(logLevel);
 			});
+			this.view.setLogLevelList(Logger.GetLogLevelList());
+			this.view.setLogLevel(Logger.GetLogLevel());
 
 			this.webexPeopleWatcher = new WebexPeopleWatcher(
 				function(people) {
@@ -667,7 +763,7 @@
 					that._WebexPeopleWatcher_onPeopleRemoved(email);
 				},
 				function() {
-					that._WebexPeopleWatcher_onUnauthorized();
+					that._WebexPeopleWatcher_onAccessTokenInvalid();
 				},
 				function(method, status) {
 					that._WebexPeopleWatcher_onStatusUpdate(method, status);
@@ -675,10 +771,21 @@
 				Logger
 			);
 			
-			// some preparing work
-			this.view.setLogLevelList(Logger.GetLogLevelList());
-			this.view.setLogLevel(Logger.GetLogLevel());
+			this.authentication = new Authentication(
+				function() {
+					that._Authentication_onTokenRefreshed();
+				},
+				function() {
+					that._Authentication_onRefreshTokenExpire();
+				},
+				Logger
+			);
+			
+			// start
+			this.authentication.prepare();
+			WebexApi.SetAccessToken(this.authentication.getAccessToken());
 			this.view.start();
+			this.webexPeopleWatcher.start();
 		}
 	}
 
