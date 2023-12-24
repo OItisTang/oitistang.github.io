@@ -28,7 +28,7 @@
 				if (xmlHttp.status == 200) {
 					successCallback(xmlHttp.responseText);
 				} else {
-					errorCallback(xmlHttp.status, xmlHttp.statusText);
+					errorCallback(xmlHttp.status);
 				}
 			}
 		}
@@ -111,11 +111,11 @@
 						onGetPeopleCallback(people);
 					}
 				},
-				function(status, statusText) {
+				function(status) {
 					that._logger.error("WebexApi.GetPeople "
 							+ "http request failed - "
-							+ "status: " + status + ", "
-							+ "statusText: " + statusText);
+							+ "email: " + email + ", "
+							+ "status: " + status);
 					if (status == 401) {
 						onE401Callback();
 					}
@@ -436,7 +436,7 @@
 		}
 
 		setServerMethodAndStatus(serverMethod, serverStatus) {
-			var serverMethodIconHtml = serverMethod == 'active' ? UiView._WatchingIconHtml: UiView._NotWatchingIconHtml;
+			var serverMethodIconHtml = serverMethod == 'active' ? UiView._WatchingIconHtml : UiView._NotWatchingIconHtml;
 			document.getElementById("serverMethod").innerHTML = serverMethodIconHtml;
 
 			document.getElementById("serverStatusIndicator").classList.remove("open", "error", "warning", "close");
@@ -487,7 +487,9 @@
 		updatePeople(people) {
 			var email = people.emails[0];
 			var peopleDiv = document.getElementById(email);
-			peopleDiv.outerHTML = PeopleHtmlMaker.MakePeopleHtml(people);
+			if (peopleDiv) {
+				peopleDiv.outerHTML = PeopleHtmlMaker.MakePeopleHtml(people);
+			}
 		}
 
 		removePeople(email) {
@@ -628,6 +630,7 @@
 			}
 
 			this.refreshTimeout = window.setTimeout(function() {
+				that.refreshTimeout = 0;
 				var apiUrl = Authentication._AuthUrl + "?refresh_token=" + getCookie('refresh_token');
 				httpGetAsync(apiUrl, function(responseText) {
 						var responseData = JSON.parse(responseText);
@@ -652,7 +655,7 @@
 	// ---------------------
 	// app
 	// ---------------------
-	class AlertWhenAvailableClientApp {
+	class AwaApp {
 		constructor() {
 		}
 
@@ -680,7 +683,7 @@
 		}
 
 		_WebexPeopleWatcher_onPeopleAdded(people) {
-			Logger.info("AlertWhenAvailableClientApp._WebexPeopleWatcher_onPeopleAdded " + people.emails[0]);
+			Logger.info("AwaApp._WebexPeopleWatcher_onPeopleAdded " + people.emails[0]);
 
 			this.view.addPeople(people);
 
@@ -689,19 +692,19 @@
 		}
 
 		_WebexPeopleWatcher_onPeopleUpdated(people) {
-			Logger.info("AlertWhenAvailableClientApp._WebexPeopleWatcher_onPeopleUpdated " + people.emails[0]);
+			Logger.info("AwaApp._WebexPeopleWatcher_onPeopleUpdated " + people.emails[0]);
 
 			this.view.updatePeople(people);
 		}
 
 		_WebexPeopleWatcher_onPeopleAvailable(people) {
-			Logger.info("AlertWhenAvailableClientApp._WebexPeopleWatcher_onPeopleAvailable " + people.emails[0]);
+			Logger.info("AwaApp._WebexPeopleWatcher_onPeopleAvailable " + people.emails[0]);
 			
 			this.view.showNotification(people.displayName + " is now available!", people.avatar);
 		}
 
 		_WebexPeopleWatcher_onPeopleRemoved(email) {
-			Logger.info("AlertWhenAvailableClientApp._WebexPeopleWatcher_onPeopleRemoved " + email);
+			Logger.info("AwaApp._WebexPeopleWatcher_onPeopleRemoved " + email);
 
 			this.view.removePeople(email);
 		}
@@ -793,7 +796,7 @@
 	// HTML start
 	// ---------------------
 	window.onload = function() {
-		var app = new AlertWhenAvailableClientApp();
+		var app = new AwaApp();
 		app.start();
 		window.app = app;
 	};
