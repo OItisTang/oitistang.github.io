@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>WebSocketSubscriberClient</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="icon.png">
+<script src="https://oitistang.github.io/Logger/Logger.js"></script>
+<script src="WebSocketSubscriber.js"></script>
+<link rel="stylesheet" href="https://rawgit.com/summerstyle/jsonTreeViewer/master/libs/jsonTree/jsonTree.css">
+<script src="https://rawgit.com/summerstyle/jsonTreeViewer/master/libs/jsonTree/jsonTree.js"></script>
+<script type="text/javascript">
+	// ---------------------
+	// vendor
+	// ---------------------
+	function findGetParameter(parameterName) {
+		var result = "";
+		var kvPair = [];
+		location.search
+			.substr(1) // eat "?" character
+			.split("&")
+			.forEach(function(item) {
+				kvPair = item.match(/(.*?)=(.*)/);
+				if (kvPair && kvPair[1] === parameterName) result = decodeURIComponent(kvPair[2]);
+			});
+		return result;
+	}
+	
+	// ---------------------
+	// UI
+	// ---------------------
+	class UiView {
+		constructor(onSubscribeCallback, onUnsubscribeCallback, onUnsubscribeAllCallback, onLogLevelChangeCallback) {
+			this.onSubscribeCallback = onSubscribeCallback;
+			this.onUnsubscribeCallback = onUnsubscribeCallback;
+			this.onUnsubscribeAllCallback = onUnsubscribeAllCallback;
+			this.onLogLevelChangeCallback = onLogLevelChangeCallback;
+		}
+
+		// private methods -----------------------------------------------------------
+
+		_prepareMainUiEventHandlers() {
+			var that = this;
+
+			document.getElementById("subscribeBtn").onclick = function() {
+				var key = document.getElementById("subscribeKey").value;
+				if (key != "") {
+					if (that.onSubscribeCallback) that.onSubscribeCallback(key);
+				}
+			};
+
+			document.getElementById("unsubscribeBtn").onclick = function() {
+				var key = document.getElementById("subscribeKey").value;
+				if (key != "") {
+					if (that.onUnsubscribeCallback) that.onUnsubscribeCallback(key);
+				}
+			};
+
+			document.getElementById("unsubscribeAllBtn").onclick = function() {
+				var keys = that.getSubscribeKeys();
+				if (keys.length > 0) {
+					if (that.onUnsubscribeAllCallback) that.onUnsubscribeAllCallback(keys);
+				}
+			};
+
+			document.getElementById("serverStatusIndicator").onclick = function() {
+				var logArea = document.getElementById('logArea');
+				if (logArea.style.display === "none") {
+					logArea.style.display = "block";
+				} else {
+					logArea.style.display = "none";
+				}
+			};
+
+			document.getElementById("logLevel").onchange = function() {
+				var logLevel = document.getElementById("logLevel").value;
+				if (that.onLogLevelChangeCallback) that.onLogLevelChangeCallback(logLevel);
+			};
+
+			document.getElementById("expandBtn").onclick = function() {
+				if (that.msgObjTree) {
+					that.msgObjTree.expand();
+				}
+			};
+
+			document.getElementById("collapseBtn").onclick = function() {
+				if (that.msgObjTree) {
+					that.msgObjTree.collapse();
+				}
+			};
+
+			document.getElementById("clearBtn").onclick = function() {
+				var messageInfoDiv = document.getElementById("messageInfo");
+				messageInfoDiv.innerHTML = "";
+
+				var messageDataDiv = document.getElementById("messageData");
+				while (messageDataDiv.firstChild) {
+					messageDataDiv.removeChild(messageDataDiv.firstChild);
+				}
+			};
+		}
+
+		// public APIs -----------------------------------------------------------
+
+		clearInput() {
+			document.getElementById("subscribeKey").value = "";
+		}
+
+		getSubscribeKeys() {
+			var keyOptions = document.getElementById('subscribeKeys').getElementsByTagName('option');
+			var keys = [];
+			for (var i=0; i<keyOptions.length; i++) {
+				keys.push(keyOptions[i].value);
+			}
+			return keys;
+		}
+
+		addSubscribeKeyOption(key) {
+			this.removeSubscribeKeyOption(key);
+
+			var keysDatalist = document.getElementById('subscribeKeys');
+			var option = document.createElement('option');
+			option.value = key;
+			keysDatalist.appendChild(option);
+		}
+
+		removeSubscribeKeyOption(key) {
+			var keysDatalist = document.getElementById('subscribeKeys');
+			for(var i=keysDatalist.options.length-1; i>=0; i--) {
+				if(keysDatalist.options[i].value == key){
+					keysDatalist.children[i].remove();
+					break;
+				}
+			}
+		}
+
+		setServerMethodAndStatus(serverMethod, serverStatus) {
+			document.getElementById("serverMethod").innerHTML = serverMethod;
+
+			document.getElementById("serverStatusIndicator").classList.remove("open", "error", "warning", "close");
+			document.getElementById("serverStatusIndicator").classList.add(serverStatus);
+		}
+
+		setLogLevelList(logLevelList) {
+			var logLevelSelect = document.getElementById("logLevel");
+			for (const logLevelObj of logLevelList) {
+				var option = document.createElement("option");
+				option.value = logLevelObj.logLevel;
+				option.text = logLevelObj.name;
+				logLevelSelect.appendChild(option);
+			}
+		}
+
+		setLogLevel(logLevel) {
+			document.getElementById("logLevel").value = logLevel;
+		}
+
+		log(logMessageClass, msg) {
+			var logMessages = document.getElementById('logMessages');
+			if (logMessages.children.length >= 50) {
+				logMessages.removeChild(
+					logMessages.getElementsByTagName('div')[0]
+				);
+			}
+			
+			var newElement = document.createElement('div');
+			newElement.innerHTML = msg;
+			newElement.classList.add(logMessageClass);
+			logMessages.appendChild(newElement);
+		}
+
+		showMessage(info, msgObj = null) {
+			var messageInfoDiv = document.getElementById("messageInfo");
+			messageInfoDiv.innerHTML = info;
+
+			if (msgObj) {
+				var messageDataDiv = document.getElementById("messageData");
+				while (messageDataDiv.firstChild) {
+					messageDataDiv.removeChild(messageDataDiv.firstChild);
+				}
+				this.msgObjTree = jsonTree.create(msgObj, messageDataDiv);
+				this.msgObjTree.expand();
+			}
+		}
+
+		start() {
+			this._prepareMainUiEventHandlers();
+		}
+	}
+
+	// ---------------------
+	// app
+	// ---------------------
+	class WebSocketSubscriberClientApp {
+		constructor(autoSubscribeKey) {
+			this.autoSubscribeKey = autoSubscribeKey;
+		}
+
+		// private methods -----------------------------------------------------------
+
+		_addAutoSubscribeKeys() {
+			var keySet = new Set(this.autoSubscribeKey.split(','));
+			for (const key of keySet) {
+				if (key != "") {
+					this.view.addSubscribeKeyOption(key);
+				}
+			}
+		}
+
+		// callback handlers -----------------------------------------------------------
+
+		_Logger_onLog(logLevelName, msg) {
+			var logMessageClass = logLevelName.toLowerCase();
+			var firstLine = msg.split('\n')[0];
+			this.view.log(logMessageClass, firstLine);
+		}
+
+		_Ui_onSubscribe(key) {
+			this.view.clearInput();
+			this.webSocketSubscriber.subscribe(key);
+		}
+
+		_Ui_onUnsubscribe(key) {
+			this.view.clearInput();
+			this.webSocketSubscriber.unsubscribe(key);
+		}
+
+		_Ui_onUnsubscribeAll(keys) {
+			this.view.clearInput();
+			
+			var that = this;
+			keys.forEach(function (key) {
+				that.webSocketSubscriber.unsubscribe(key);
+			});
+		}
+
+		_Ui_onLogLevelChange(logLevel) {
+			Logger.SetLogLevel(logLevel);
+		}
+
+		_Subscriber_onWelcomeMsg(msgObj) {
+			var info = "received [" + msgObj.type + "] message, connId: [" + msgObj.value.connectionId + "]";
+			this.view.showMessage(info, msgObj);
+
+			var that = this;
+			var keys = this.view.getSubscribeKeys();
+			keys.forEach(function (key) {
+				that.webSocketSubscriber.subscribe(key);
+			});
+		}
+
+		_Subscriber_onPublishMsg(msgObj) {
+			this.updateTimestamp = msgObj.date;
+			var info = msgObj.date + " - received [" + msgObj.type + "] message for key: [" + msgObj.key + "]";
+			this.view.showMessage(info, msgObj);
+		}
+
+		_Subscriber_onSubscribeSuccessMsg(msgObj) {
+			if (msgObj.value.cachedPublishData) {
+				this.updateTimestamp = msgObj.value.cachedPublishData.date;
+			}
+			var info = "received [" + msgObj.type + "] message for key: [" + msgObj.value.key + "]";
+			this.view.addSubscribeKeyOption(msgObj.value.key);
+			this.view.showMessage(info, msgObj);
+		}
+
+		_Subscriber_onUnsubscribeSuccessMsg(msgObj) {
+			var info = "received [" + msgObj.type + "] message for key: [" + msgObj.value.key + "]";
+			this.view.removeSubscribeKeyOption(msgObj.value.key);
+			this.view.showMessage(info, msgObj);
+		}
+
+		_Subscriber_onStatusUpdate(status) {
+			this.view.setServerMethodAndStatus("Push", status);
+		}
+
+		// public APIs -----------------------------------------------------------
+
+		start() {
+			var that = this;
+
+			// create modules
+			Logger.SetLogCallback(function(logLevelName, msg) {
+				that._Logger_onLog(logLevelName, msg);
+			});
+
+			this.view = new UiView(function(key) {
+				that._Ui_onSubscribe(key);
+			}, function(key) {
+				that._Ui_onUnsubscribe(key);
+			}, function(keys) {
+				that._Ui_onUnsubscribeAll(keys);
+			}, function(logLevel) {
+				that._Ui_onLogLevelChange(logLevel);
+			});
+
+			this.webSocketSubscriber = new WebSocketSubscriber(
+				'wss://149.28.204.205:8081',
+				{
+					onWelcomeMsgCallback : function(msgObj) {
+						that._Subscriber_onWelcomeMsg(msgObj);
+					},
+					onPublishMsgCallback : function(msgObj) {
+						that._Subscriber_onPublishMsg(msgObj);
+					},
+					onSubscribeSuccessMsgCallback : function(msgObj) {
+						that._Subscriber_onSubscribeSuccessMsg(msgObj);
+					},
+					onUnsubscribeSuccessMsgCallback : function(msgObj) {
+						that._Subscriber_onUnsubscribeSuccessMsg(msgObj);
+					},
+					onStatusUpdateCallback : function(status) {
+						that._Subscriber_onStatusUpdate(status);
+					},
+				},
+				Logger
+			);
+			
+			// some preparing work
+			this.view.setLogLevelList(Logger.GetLogLevelList());
+			this.view.setLogLevel(Logger.GetLogLevel());
+			this.view.start();
+
+			// app start
+			this._addAutoSubscribeKeys();
+
+			// start receiving updates
+			this.webSocketSubscriber.start();
+		}
+	}
+
+	// ---------------------
+	// HTML start
+	// ---------------------
+	window.onload = function() {
+		// optional parameter to auto subscribe a key
+		var autoSubscribeKey = findGetParameter("key");
+
+		// start app with parameters
+		var webSocketSubscriberClientApp = new WebSocketSubscriberClientApp(autoSubscribeKey);
+		webSocketSubscriberClientApp.start();
+		
+		window.app = webSocketSubscriberClientApp;
+	};
+</script>
+<style>
+	:root {
+		--main-bg-color: #154f85;
+		--main-text-color: black;
+		
+		--text-light-color: white;
+		
+		--button-bg-color: white;
+		--button-highlight-bg-color: #121F3C;
+		
+		--indicator-color-grey: grey;
+		--indicator-color-red: red;
+		--indicator-color-yellow: yellow;
+		--indicator-color-green: green;
+
+		--content-bg-color: white;
+
+		--log-bg-color: #282828e6;
+		--log-text-color-red: rgb(240 125 125);
+		--log-text-color-yellow: rgb(233 204 142);
+		--log-text-color-lime: rgb(98 196 240);
+		--log-text-color-blue: rgb(13 134 255);
+	}
+	body {
+		background-color: var(--main-bg-color);
+		font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Noto Sans,Ubuntu,Droid Sans,Helvetica Neue,sans-serif;
+	}
+	a {
+		color: var(--main-text-color);
+	}
+	#main {
+		display: flex;
+		flex-direction: column;
+		height: 97vh;
+	}
+	#topBar {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-left: 6px;
+		margin-right: 6px;
+	}
+	#logo {
+		margin-top: 3px;
+	}
+	#logoImg {
+		width: 18px;
+		height: 18px;
+	}
+	#subscriptionMgr {
+		text-align: center;
+	}
+	.keyInput {
+		border-radius: 4px;
+		border: none;
+	}
+	.actionBtn {
+		border-radius: 4px;
+		border: none;
+		background-color: var(--button-bg-color);
+		cursor: pointer;
+	}
+	#serverStatus {
+		color: var(--text-light-color);
+		font-size: smaller;
+	}
+	#serverStatusIndicator {
+		background-color: var(--indicator-color-grey);
+		border-radius: 50%;
+		width: 10px;
+		height: 10px;
+		display: inline-block;
+		cursor: pointer;
+	}
+	#serverStatusIndicator.open {
+		background-color: var(--indicator-color-green);
+	}
+	#serverStatusIndicator.warning {
+		background-color: var(--indicator-color-yellow);
+	}
+	#serverStatusIndicator.error {
+		background-color: var(--indicator-color-red);
+	}
+	#serverStatusIndicator.close {
+		background-color: var(--indicator-color-grey);
+	}
+	#contentArea {
+		margin-top: 4px;
+		flex-grow: 1;
+		overflow: scroll;
+		border-radius: 6px;
+		margin-left: 10px;
+		margin-right: 10px;
+		background-color: var(--content-bg-color);
+		overflow: scroll;
+	}
+	#messageTopBar {
+		display: flex;
+		flex-direction: row;
+	}
+	#messageInfo {
+		margin-left: 8px;
+		margin-top: 6px;
+		flex-grow: 1;
+	}
+	#messageDataMgr {
+		margin-top: 6px;
+		margin-right: 8px;
+	}
+	.msgDataControlBtn {
+		border-radius: 50%;
+		border: none;
+		background-color: var(--button-highlight-bg-color);
+		color: var(--text-light-color);
+		cursor: pointer;
+		width: 20px;
+		height: 20px;
+	}
+	.jsontree_tree {
+		margin-left: -20px;
+	}
+	#logArea {
+		color: var(--text-light-color);
+		position: fixed;
+		background-color: var(--log-bg-color);
+		left: 0px;
+		top: 36px;
+		width: 100%;
+		height: 92%;
+		font-size: x-small;
+	}
+	#logArea a {
+		color: var(--text-light-color);
+	}
+	#logLevelControl {
+		position: absolute;
+		top: 10px;
+		right: 8px;
+	}
+	#logMessages {
+		margin-left: 8px;
+		margin-right: 12px;
+		height: 90%;
+		overflow-y: scroll;
+	}
+	#logMessages > .log {
+		color: var(--text-light-color);
+	}
+	#logMessages > .error {
+		color: var(--log-text-color-red);
+	}
+	#logMessages > .warning {
+		color: var(--log-text-color-yellow);
+	}
+	#logMessages > .info {
+		color: var(--log-text-color-lime);
+	}
+	#logMessages > .debug {
+		color: var(--log-text-color-blue);
+	}
+</style>
+</head>
+<body>
+	<div id="main">
+		<div id="topBar">
+			<div id="logo">
+				<img id="logoImg" src="icon.png">
+			</div>
+			<div id="subscriptionMgr">
+				<input type="text" id="subscribeKey" class="keyInput" list="subscribeKeys" placeholder="subscribe a key to receive updates" size="48">
+				<datalist id="subscribeKeys"></datalist>
+				<input type="button" id="subscribeBtn" class="actionBtn" value=" + " title="Subscribe">
+				<input type="button" id="unsubscribeBtn" class="actionBtn" value=" - " title="Unsubscribe">
+				<input type="button" id="unsubscribeAllBtn" class="actionBtn" value=" x " title="Unsubscribe All">
+			</div>
+			<div id="serverStatus">
+				<span id="serverMethod"></span>
+				<span id="serverStatusIndicator"></span>
+			</div>
+		</div>
+		<div id="contentArea">
+			<div id="messageTopBar">
+				<div id="messageInfo">waiting for message ...</div>
+				<div id="messageDataMgr">
+					<input type="button" id="expandBtn" class="msgDataControlBtn" value="+" title="Expand">
+					<input type="button" id="collapseBtn" class="msgDataControlBtn" value="-" title="Collapse">
+					<input type="button" id="clearBtn" class="msgDataControlBtn" value="x" title="Clear Message">
+				</div>
+			</div>
+			<hr>
+			<div id="messageData"></div>
+		</div>
+	</div>
+	<div id="logArea" style="display: none;">
+		<h2>Log</h2>
+		<div id="logLevelControl">
+			Level:
+			<select id="logLevel">
+			</select>
+		</div>
+		<div id="logMessages"></div>
+	</div>
+</body>
+</html>
