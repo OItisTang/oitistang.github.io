@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Trello Today</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="Trello.png">
+<script src="https://oitistang.github.io/Logger/Logger.js"></script>
+<script src="https://oitistang.github.io/WebSocketSubscriberClient/WebSocketSubscriber.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<script src="https://unpkg.com/showdown/dist/showdown.min.js"></script>
+<script type="text/javascript">
+	// ---------------------
+	// vendor
+	// ---------------------
+	function httpGetAsync(theUrl, callback = null) {
+		var xmlHttp = new XMLHttpRequest();
+		xmlHttp.onreadystatechange = function() {
+			if (callback && xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+				callback(xmlHttp.responseText);
+			}
+		}
+		xmlHttp.open("GET", theUrl, true); // true for asynchronous
+		xmlHttp.send(null);
+	}
+	
+	function httpGetSync(theUrl, callback = null) {
+		var xmlHttp = new XMLHttpRequest();
+		xmlHttp.onreadystatechange = function() {
+			if (callback && xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+				callback(xmlHttp.responseText);
+			}
+		}
+		xmlHttp.open("GET", theUrl, false); // false for synchronous
+		xmlHttp.send(null);
+	}
+
+	function httpPutSync(theUrl) {
+		var xmlHttp = new XMLHttpRequest();
+		xmlHttp.open("PUT", theUrl, false); // false for synchronous
+		xmlHttp.send(null);
+	}
+	
+	function escapeHtml(unsafe) {
+		return unsafe
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#039;");
+	}
+	
+	function findGetParameter(parameterName) {
+		var result = "";
+		var kvPair = [];
+		location.search
+			.substr(1) // eat "?" character
+			.split("&")
+			.forEach(function(item) {
+				kvPair = item.match(/(.*?)=(.*)/);
+				if (kvPair && kvPair[1] === parameterName) result = decodeURIComponent(kvPair[2]);
+			});
+		return result;
+	}
+	
+	// ---------------------
+	// Trello APIs & Data Manager
+	// ---------------------
+	class TrelloApi {
+		static _TrelloApiBaseUrl = "https://api.trello.com/1/";
+
+		static _trelloAppKey = "";
+		static _trelloAppToken = "";
+		static _logger = console;
+
+		// init APIs -----------------------------------------------------------
+
+		static SetAppKeyAndToken(trelloAppKey, trelloAppToken) {
+			this._trelloAppKey = trelloAppKey;
+			this._trelloAppToken = trelloAppToken;
+		}
+
+		static SetLogger(logger) {
+			this._logger = logger;
+		}
+
+		// Trello APIs -----------------------------------------------------------
+
+		static GetBoard(boardShortLink, onGetBoardCallback) {
+			this._logger.debug("TrelloApi.GetBoard " + boardShortLink);
+			var apiUrl = this._TrelloApiBaseUrl + "boards/" + boardShortLink + "?"
+							+ "key=" + this._trelloAppKey
+							+ "&"
+							+ "token=" + this._trelloAppToken;
+			httpGetSync(apiUrl, function(responseText) {
+					var board = JSON.parse(responseText);
+					onGetBoardCallback(board);
+				}
+			);
+		}
+
+		static GetLists(boardShortLink, onGetListsCallback) {
+			this._logger.debug("TrelloApi.GetLists " + boardShortLink);
+			var apiUrl = this._TrelloApiBaseUrl + "boards/" + boardShortLink + "/lists?"
+							+ "key=" + this._trelloAppKey
+							+ "&"
+							+ "token=" + this._trelloAppToken;
+			httpGetSync(apiUrl, function(responseText) {
+					var lists = JSON.parse(responseText);
+					onGetListsCallback(lists);
+				}
+			);
+		}
+
+		static GetCards(boardShortLink, onGetCardsCallback) {
+			this._logger.debug("TrelloApi.GetCards " + boardShortLink);
+			var apiUrl = this._TrelloApiBaseUrl + "boards/" + boardShortLink + "/cards?"
+							+ "key=" + this._trelloAppKey
+							+ "&"
+							+ "token=" + this._trelloAppToken;
+			httpGetAsync(apiUrl, function(responseText) {
+					var cards = JSON.parse(responseText);
+					onGetCardsCallback(cards);
+				}
+			);
+		}
+
+		static GetChecklist(checklistId, onGetChecklistCallback) {
+			this._logger.debug("TrelloApi.GetChecklist " + checklistId);
+			var apiUrl = this._TrelloApiBaseUrl + "checklists/" + checklistId + "?"
+							+ "key=" + this._trelloAppKey
+							+ "&"
+							+ "token=" + this._trelloAppToken;
+			httpGetSync(apiUrl, function(responseText) {
+					var checklist = JSON.parse(responseText);
+					onGetChecklistCallback(checklist);
+				}
+			);
+		}
+
+		static UpdateCardSetDueDate(cardId, date) {
+			this._logger.debug("TrelloApi.UpdateCardSetDueDate " + cardId);
+			var dueStr = date == null ? null : date.toUTCString();
+			var apiUrl = this._TrelloApiBaseUrl + "cards/" + cardId + "?"
+							+ "key=" + this._trelloAppKey
+							+ "&"
+							+ "token=" + this._trelloAppToken
+							+ "&"
+							+ "due=" + dueStr
+							+ "&"
+							+ "dueComplete=false";
+			httpPutSync(apiUrl);
+		}
+
+		static UpdateCardMoveToList(cardId, listId) {
+			this._logger.debug("TrelloApi.UpdateCardMoveToList cardId=[" + cardId + "], listId=[" + listId + "]");
+			var apiUrl = this._TrelloApiBaseUrl + "cards/" + cardId + "?"
+							+ "key=" + this._trelloAppKey
+							+ "&"
+							+ "token=" + this._trelloAppToken
+							+ "&"
+							+ "idList=" + listId
+							+ "&"
+							+ "pos=bottom";
+			httpPutSync(apiUrl);
+		}
+
+		static UpdateCardSetCheckItemChecked(cardId, checkItemId, isChecked) {
+			this._logger.debug("TrelloApi.UpdateCardSetCheckItemState cardId=[" + cardId + "], checkItemId=[" + checkItemId + "], isChecked=[" + isChecked + "]");
+			var state = isChecked ? "complete" : "incomplete";
+			var apiUrl = this._TrelloApiBaseUrl + "cards/" + cardId + "/checkItem/" + checkItemId + "?"
+							+ "key=" + this._trelloAppKey
+							+ "&"
+							+ "token=" + this._trelloAppToken
+							+ "&"
+							+ "state=" + state;
+			httpPutSync(apiUrl);
+		}
+	}
+
+	class TrelloData {
+		constructor(boardShortLink, onCardsLoadedCallback, logger = console) {
+			this.boardShortLink = boardShortLink;
+			this.onCardsLoadedCallback = onCardsLoadedCallback;
+			this.logger = logger;
+
+			this.board = null;
+			this.cards = [];
+			this.lists = [];
+			
+			this.updateDate = new Date('1970-01-01 00:00:00');
+		}
+
+		// core methods -----------------------------------------------------------
+
+		_loadBoard() {
+			var that = this;
+			TrelloApi.GetBoard(this.boardShortLink, function(board) {
+				that.board = board;
+			});
+		}
+
+		_getBoardName() {
+			if (!this.board) {
+				this._loadBoard();
+			}
+
+			var boardName = this.board.name;
+
+			return boardName;
+		}
+
+		_getBoardShortUrl() {
+			if (!this.board) {
+				this._loadBoard();
+			}
+
+			var boardShortUrl = this.board.shortUrl;
+
+			return boardShortUrl;
+		}
+
+		_loadCards() {
+			var that = this;
+			TrelloApi.GetCards(this.boardShortLink, function(cards) {
+				that.cards = cards;
+				if (that.onCardsLoadedCallback) that.onCardsLoadedCallback(that.boardShortLink);
+			});
+		}
+
+		_loadCardsDelayed() {
+			var that = this;
+			window.clearTimeout(this.loadCardsTimeout);
+			this.loadCardsTimeout = window.setTimeout(function() {
+				that._loadCards();
+			}, 0.2 * 1000);
+		}
+
+		_loadLists() {
+			var that = this;
+			TrelloApi.GetLists(this.boardShortLink, function(lists) {
+				that.lists = lists;
+			});
+		}
+
+		_getListNameImpl(idList) {
+			for (const list of this.lists) {
+				if (list.id == idList) {
+					return list.name;
+				}
+			}
+
+			return "";
+		}
+
+		_getListName(idList) {
+			var listName = this._getListNameImpl(idList);
+
+			if (listName == "") {
+				this._loadLists();
+				listName = this._getListNameImpl(idList);
+			}
+
+			return listName;
+		}
+
+		_prepareBoardInfoForCard(card) {
+			if (card._boardShortLink != null) {
+				return;
+			}
+
+			card._boardShortLink = this.boardShortLink;
+		}
+
+		_prepareListNameForCard(card) {
+			if (card._listName != null) {
+				return;
+			}
+			
+			card._listName = this._getListName(card.idList);
+		}
+
+		_prepareChecklistsForCard(card) {
+			if (card._checklists != null) {
+				return;
+			}
+			
+			card._checklists = [];
+
+			var posCompareFuc = function(a, b) {return a.pos - b.pos;};
+			
+			for (const idChecklist of card.idChecklists) {
+				TrelloApi.GetChecklist(idChecklist, function(checklist) {
+					checklist.checkItems.sort(posCompareFuc);
+					card._checklists.push(checklist);
+				});
+			}
+			
+			card._checklists.sort(posCompareFuc);
+		}
+
+		// utils -----------------------------------------------------------------
+
+		_formatDayNumber(date) {
+			return date.getFullYear()*10000 + (date.getMonth()+1)*100 + date.getDate();
+		}
+
+		// public APIs -----------------------------------------------------------
+
+		getLists() {
+			return this.lists;
+		}
+
+		loadToDate(date) {
+			if (date > this.updateDate) {
+				this.updateDate = date;
+				this._loadCardsDelayed();
+			}
+		}
+
+		hasCardForDate(cardId, dateStr) {
+			for (const card of this.cards) {
+				if (card.id == cardId) {
+					var dueDate = new Date(card.due);
+					var givenDate = new Date(dateStr);
+					if (dueDate.toDateString() == givenDate.toDateString()) {
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+
+		getCardsDataForDate(dateStr) {
+			var cardsForTheDate = [];
+			var hasDueBeforeThisDate = false;
+			var hasDueAfterThisDate = false;
+
+			for (const card of this.cards) {
+				if (card.due && card.dueComplete == false) {
+					var dueDate = new Date(card.due);
+					var givenDate = new Date(dateStr);
+					if (dueDate.toDateString() == givenDate.toDateString()) {
+						this._prepareBoardInfoForCard(card);
+						this._prepareChecklistsForCard(card);
+						this._prepareListNameForCard(card);
+
+						cardsForTheDate.push(card);
+					} else {
+						var dayDiff = this._formatDayNumber(dueDate) - this._formatDayNumber(givenDate);
+
+						if (dayDiff < 0) hasDueBeforeThisDate = true;
+						if (dayDiff > 0) hasDueAfterThisDate = true;
+					}
+				}
+			}
+
+			return {
+				boardName: this._getBoardName(),
+				boardShortUrl: this._getBoardShortUrl(),
+				cards: cardsForTheDate,
+				hasDueBefore: hasDueBeforeThisDate,
+				hasDueAfter: hasDueAfterThisDate,
+			};
+		}
+	}
+
+	class TrelloDataManager {
+		constructor(boardShortLinkStr, onCardsLoadedCallback, logger = console) {
+			this.trelloDataDict = {};
+			var boardShortLinkStrSet = new Set(boardShortLinkStr.split(','));
+			for (const boardShortLink of boardShortLinkStrSet) {
+				if (boardShortLink != "") {
+					var trelloData = new TrelloData(boardShortLink, onCardsLoadedCallback, logger);
+					this.trelloDataDict[boardShortLink] = trelloData;
+				}
+			}
+		}
+
+		getBoardShortLinks() {
+			var boardShortLinks = [];
+			for (const boardShortLink in this.trelloDataDict) {
+				boardShortLinks.push(boardShortLink);
+			}
+			return boardShortLinks;
+		}
+
+		getLists(boardShortLink_toMatch) {
+			for (const boardShortLink in this.trelloDataDict) {
+				if (boardShortLink_toMatch == boardShortLink) {
+					var trelloData = this.trelloDataDict[boardShortLink];
+					return trelloData.getLists();
+				}
+			}
+
+			return [];
+		}
+
+		loadToDate(date, boardShortLink_toMatch = null) {
+			if (boardShortLink_toMatch == null) {
+				for (const boardShortLink in this.trelloDataDict) {
+					var trelloData = this.trelloDataDict[boardShortLink];
+					trelloData.loadToDate(date);
+				}
+			} else {
+				for (const boardShortLink in this.trelloDataDict) {
+					if (boardShortLink_toMatch == boardShortLink) {
+						var trelloData = this.trelloDataDict[boardShortLink];
+						trelloData.loadToDate(date);
+						break;
+					}
+				}
+			}
+		}
+
+		hasCardForDate(boardShortLink_toMatch, cardId, dateStr) {
+			for (const boardShortLink in this.trelloDataDict) {
+				if (boardShortLink_toMatch == boardShortLink) {
+					var trelloData = this.trelloDataDict[boardShortLink];
+					if (trelloData.hasCardForDate(cardId, dateStr)) {
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+
+		getCardsDataForDate(dateStr, boardShortLink_toMatch = null) {
+			var cardsDataArray = [];
+
+			var hasDueBeforeThisDate = false;
+			var hasDueAfterThisDate = false;
+
+			if (boardShortLink_toMatch == null) {
+				for (const boardShortLink in this.trelloDataDict) {
+					var trelloData = this.trelloDataDict[boardShortLink];
+					var cardsData = trelloData.getCardsDataForDate(dateStr);
+					
+					cardsDataArray.push(cardsData);
+					if (cardsData.hasDueBefore) hasDueBeforeThisDate = true;
+					if (cardsData.hasDueAfter) hasDueAfterThisDate = true;
+				}
+			} else {
+				for (const boardShortLink in this.trelloDataDict) {
+					if (boardShortLink_toMatch == boardShortLink) {
+						var trelloData = this.trelloDataDict[boardShortLink];
+						var cardsData = trelloData.getCardsDataForDate(dateStr);
+						
+						cardsDataArray.push(cardsData);
+						if (cardsData.hasDueBefore) hasDueBeforeThisDate = true;
+						if (cardsData.hasDueAfter) hasDueAfterThisDate = true;
+						
+						break;
+					}
+				}
+			}
+
+			return {
+				cardsDataArray: cardsDataArray,
+				hasDueBefore: hasDueBeforeThisDate,
+				hasDueAfter: hasDueAfterThisDate,
+			};
+		}
+	}
+
+	// ---------------------
+	// UI Tool: Make Cards HTML
+	// ---------------------
+	class CardsHtmlMaker {
+		static _BoardNameTemplate = `<div class="boardNameArea"><span class="boardName" data-board-short-url="{boardShortUrl}">{boardName}</span></div>`;
+
+		static _LabelsWrapperTemplate = `<span class="labels">{labels}</span>`;
+		static _LabelTemplate = `<span class="label {labelColor}">{labelName}</span>`;
+
+		static _HorizontalLineHtml = `<hr class="horizontalLine">`;
+
+		static _CheckItemsWrapperTemplate = `<div class="checkItems">{checkItems}</div>`;
+		static _StateUncheckedIconHtml = `<i class="checkItemStateIcon fa fa-square-o"></i>`;
+		static _StateCheckedIconHtml = `<i class="checkItemStateIcon fa fa-check-square-o"></i>`;
+		static _CheckItemTemplate = `<div class="checkItem" data-check-item-id="{checkItemId}" data-check-item-state="{checkItemState}">{checkItemStateIcon} <span class="checkItemName">{checkItemName}</span></div>`;
+
+		static _CardTemplate = `
+			<div class="card" data-card-id="{cardId}" data-card-short-url="{cardShortUrl}" data-board-short-link="{boardShortLink}">
+				<div class="header">
+					<span class="list">{listName}</span>
+					{labelsWrapper}
+				</div>
+				<div class="nameArea"><span class="name">{cardName}</span></div>
+				<div class="dueArea">
+					<span class="due {dueColor}"><i class="dueIcon fa fa-fw fa-clock-o"></i> {dueTime}</span>
+					<div class="dueActions">
+						<div class="dueAction setDueToday"><i class="fa fa-fw fa-clock-o"></i> Set Due Today</div>
+						<div class="dueAction setDueOneDayLater"><i class="fa fa-fw fa-hourglass-half"></i> Set Due One Day Later</div>
+						<div class="dueAction setDueOneWeekLater"><i class="fa fa-fw fa-calendar-plus-o"></i> Set One Week Later</div>
+						<div class="dueAction moveToDone"><i class="fa fa-fw fa-check-circle"></i> Move to Done</div>
+					</div>
+				</div>
+				<div class="desc">{descHtml}</div>
+				<div class="toggleDescCollapseWrapper"><div class="toggleDescCollapse"></div></div>
+				{horizontalLine}
+				{checkItemsWrapper}
+			</div>
+		`;
+
+		static _CardCountInfoTemplate = `<div class="cardCountInfo">{cardCountInfo}</div>`;
+
+		static _logger = console;
+
+		static SetLogger(logger) {
+			this._logger = logger;
+		}
+
+		static _FormatShortTimeStr(date) {
+			var hour = String(date.getHours()).padStart(2, '0');
+			var minute = String(date.getMinutes()).padStart(2, '0');
+
+			var dueTimeStr = hour + ':' + minute;
+			return dueTimeStr;
+		}
+
+		static _ConvertMarkdownToHtml(text) {
+			if (text == "") {
+				return text;
+			}
+			
+			if (!this._markdownConverter) {
+				this._markdownConverter = new showdown.Converter({
+					encodeEmails: false,
+					openLinksInNewWindow: true,
+					simpleLineBreaks: true,
+					simplifiedAutoLink: true,
+					ghMentions: true,
+					ghMentionsLink: "webexteams://im?email={u}@cisco.com",
+				});
+			}
+
+			this._logger.debug("CardsHtmlMaker._ConvertMarkdownToHtml: text: " + text);
+
+			var preProcessedText = text
+				.replace(/\\@‌/g, "@").replace(/\\@/g, "@")  // new Trello editor is messing up with the "@"
+				.replace(/webexteams:/g, "webex_x:")  // separate it from ghMentions, this is typed manually, will replace it later
+				.replace(/onenote:https:/g, "onenote_x:");  // https will be processed as link
+			
+			this._logger.debug("CardsHtmlMaker._ConvertMarkdownToHtml: preProcessedText: " + preProcessedText);
+
+			var markdownProcessedText = this._markdownConverter.makeHtml(preProcessedText);
+
+			this._logger.debug("CardsHtmlMaker._ConvertMarkdownToHtml: markdownProcessedText: " + markdownProcessedText);
+			
+			var postProcessedText = markdownProcessedText
+				.replace(/webex_x:([^ <]*)/g, "<a href=\"webexteams:$1\"><span>webexteams:$1</span></a>")
+				.replace(/onenote_x:([^ <]*)/g, "<a href=\"onenote:https:$1\"><span>onenote:https:$1</span></a>")
+				.replace(/ title="[^"]?"/g, "") // remove empty hover tooltip for links
+				.replace(/<p>/g, "").replace(/<\/p>/g, "<br>") // CSS Line Clamp fix
+				.replace(/<hr \/>/g, "<br>⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯<br><br><br>")
+				.replace(/target="_blank">/g, "target=\"_blank\"><span>")
+				.replace(/<\/a>/g, "</span></a>");
+
+			this._logger.debug("CardsHtmlMaker._ConvertMarkdownToHtml: postProcessedText: " + postProcessedText);
+			
+			return postProcessedText;
+		}
+
+		static MakeCardHtml(card) {
+			// labels
+			var labels = "";
+			for (const label of card.labels) {
+				var labelName = escapeHtml(label.name);
+				if (labelName == "") {
+					labelName = "&nbsp;";
+				}
+				labels += this._LabelTemplate
+					.replace("{labelColor}", label.color)
+					.replace("{labelName}", labelName);
+			}
+			
+			var labelsWrapper = "";
+			if (labels != "") {
+				labelsWrapper = this._LabelsWrapperTemplate.replace("{labels}", labels);
+			}
+			
+			// due
+			var now = new Date();
+			var dueDate = new Date(card.due);
+			var dueColor = dueDate < now ? "red" : "yellow";
+
+			// checkitems
+			var checkItems = "";
+			for (const checklist of card._checklists) {
+				for (const checkItem of checklist.checkItems) {
+					var checkItemStateIcon = checkItem.state == "incomplete" ? this._StateUncheckedIconHtml : this._StateCheckedIconHtml;
+					checkItems += this._CheckItemTemplate
+						.replace("{checkItemId}", checkItem.id)
+						.replace("{checkItemState}", checkItem.state)
+						.replace("{checkItemStateIcon}", checkItemStateIcon)
+						.replace("{checkItemName}", escapeHtml(checkItem.name));
+				}
+			}
+			
+			var checkItemsWrapper = "";
+			if (checkItems != "") {
+				checkItemsWrapper = this._CheckItemsWrapperTemplate.replace("{checkItems}", checkItems);
+			}
+			
+			// horizontalLine
+			var horizontalLine = "";
+			if (card.desc != "" && checkItemsWrapper != "") {
+				horizontalLine = this._HorizontalLineHtml;
+			}
+	
+			// cardHtml
+			return this._CardTemplate
+				.replace("{cardId}", card.id)
+				.replace("{cardShortUrl}", card.shortUrl)
+				.replace("{boardShortLink}", card._boardShortLink)
+				.replace("{listName}", card._listName)
+				.replace("{labelsWrapper}", labelsWrapper)
+				.replace("{cardName}", escapeHtml(card.name))
+				.replace("{dueColor}", dueColor)
+				.replace("{dueTime}", this._FormatShortTimeStr(dueDate))
+				.replace("{descHtml}", this._ConvertMarkdownToHtml(card.desc))
+				.replace("{horizontalLine}", horizontalLine)
+				.replace("{checkItemsWrapper}", checkItemsWrapper);
+		}
+
+		static MakeCardsHtml(cardsDataArray) {
+			var cardsHtml = "";
+
+			for (const cardsData of cardsDataArray) {
+				var whetherCreateBoardNameHeader = cardsDataArray.length > 1;
+				var cards = cardsData.cards;
+
+				if (whetherCreateBoardNameHeader && cards.length > 0) {
+					cardsHtml += this._BoardNameTemplate
+						.replace("{boardName}", cardsData.boardName)
+						.replace("{boardShortUrl}", cardsData.boardShortUrl);
+				}
+				
+				for (const card of cards) {
+					cardsHtml += this.MakeCardHtml(card);
+				}
+
+				if (cards.length > 0) {
+					var cardCountInfo = cards.length == 1 ? "1 card" : cards.length + " cards";
+					cardsHtml += this._CardCountInfoTemplate.replace("{cardCountInfo}", cardCountInfo);
+				}
+			}
+			
+			return cardsHtml;
+		}
+	}
+
+	// ---------------------
+	// UI
+	// ---------------------
+	class UiView {
+		static _LoadingHtml = `<div class="loadingInfo">loading... <i class="fa fa-spinner fa-spin"></i></div>`;
+		static _NoCardsDueTemplate = `
+			<div class="noCardIcon"><i class="fa fa-inbox"></i></div>
+			<div class="noCardInfo">No card is due on this day ({dateStr}).</div>
+		`;
+		static _NoCardsDueTodayHtml = `
+			<div class="noCardIcon"><i class="fa fa-flag-checkered"></i></div>
+			<div class="noCardInfo">All done today!</div>
+		`;
+
+		constructor(
+			callbacks = {
+				onTrelloLogoClickCallback : null,
+				onDateInputChangeCallback : null,
+				onLogLevelChangeCallback : null,
+
+				onBoardNameClickCallback : null,
+
+				onCardNameClickCallback : null,
+
+				onSetDueTodayClickCallback : null,
+				onSetDueOneDayLaterClickCallback : null,
+				onSetDueOneWeekLaterClickCallback : null,
+				onMoveToDoneClickCallback : null,
+
+				onCheckItemClickCallback : null,
+			},
+			logger = console
+		) {
+			this.onTrelloLogoClickCallback = callbacks.onTrelloLogoClickCallback;
+			this.onDateInputChangeCallback = callbacks.onDateInputChangeCallback;
+			this.onLogLevelChangeCallback = callbacks.onLogLevelChangeCallback;
+
+			this.onBoardNameClickCallback = callbacks.onBoardNameClickCallback;
+
+			this.onCardNameClickCallback = callbacks.onCardNameClickCallback;
+
+			this.onSetDueTodayClickCallback = callbacks.onSetDueTodayClickCallback;
+			this.onSetDueOneDayLaterClickCallback = callbacks.onSetDueOneDayLaterClickCallback;
+			this.onSetDueOneWeekLaterClickCallback = callbacks.onSetDueOneWeekLaterClickCallback;
+			this.onMoveToDoneClickCallback = callbacks.onMoveToDoneClickCallback;
+
+			this.onCheckItemClickCallback = callbacks.onCheckItemClickCallback;
+
+			this.logger = logger;
+
+			this.expandedCards = {};
+		}
+
+		// private methods -----------------------------------------------------------
+
+		_installBoardNameClickHandler() {
+			var that = this;
+			document.querySelectorAll('.boardName').forEach(function(boardNameDiv) {
+				var boardShortUrl = boardNameDiv.dataset.boardShortUrl;
+				boardNameDiv.addEventListener('click', function(e) {
+					if (that.onBoardNameClickCallback) that.onBoardNameClickCallback(boardShortUrl);
+				});
+			});
+		}
+
+		_installCardNameClickHandlerForCard(cardDiv) {
+			var cardShortUrl = cardDiv.dataset.cardShortUrl;
+			var nameDiv = cardDiv.getElementsByClassName('name')[0];
+
+			var that = this;
+			nameDiv.addEventListener('click', function(e) {
+				if (that.onCardNameClickCallback) that.onCardNameClickCallback(cardShortUrl);
+			});
+		}
+
+		_installDueActionClickHandlerForCard(cardDiv) {
+			var boardShortLink = cardDiv.dataset.boardShortLink;
+			var cardId = cardDiv.dataset.cardId;
+
+			var dueAreaDiv = cardDiv.getElementsByClassName('dueArea')[0];
+			var dueSpan = cardDiv.getElementsByClassName('due')[0];
+			var dueActionsDiv = cardDiv.getElementsByClassName('dueActions')[0];
+			var dueIcon = cardDiv.getElementsByClassName('dueIcon')[0];
+
+			var setDueTodayDiv = cardDiv.getElementsByClassName('setDueToday')[0];
+			var setDueOneDayLaterDiv = cardDiv.getElementsByClassName('setDueOneDayLater')[0];
+			var setDueOneWeekLaterDiv = cardDiv.getElementsByClassName('setDueOneWeekLater')[0];
+			var moveToDoneDiv = cardDiv.getElementsByClassName('moveToDone')[0];
+
+			var that = this;
+
+			dueAreaDiv.addEventListener('mouseenter', function(e) {
+				var topPos = dueSpan.getBoundingClientRect().bottom - 2;
+				dueActionsDiv.style.top = topPos + 'px';
+			});
+
+			setDueTodayDiv.addEventListener('click', function(e) {
+				dueActionsDiv.style.display = "none";
+				dueIcon.classList.remove('fa-clock-o');
+				dueIcon.classList.add('fa-spinner', 'fa-spin');
+				if (that.onSetDueTodayClickCallback) that.onSetDueTodayClickCallback(boardShortLink, cardId);
+			});
+
+			setDueOneDayLaterDiv.addEventListener('click', function(e) {
+				dueActionsDiv.style.display = "none";
+				dueIcon.classList.remove('fa-clock-o');
+				dueIcon.classList.add('fa-spinner', 'fa-spin');
+				if (that.onSetDueOneDayLaterClickCallback) that.onSetDueOneDayLaterClickCallback(boardShortLink, cardId);
+			});
+
+			setDueOneWeekLaterDiv.addEventListener('click', function(e) {
+				dueActionsDiv.style.display = "none";
+				dueIcon.classList.remove('fa-clock-o');
+				dueIcon.classList.add('fa-spinner', 'fa-spin');
+				if (that.onSetDueOneWeekLaterClickCallback) that.onSetDueOneWeekLaterClickCallback(boardShortLink, cardId);
+			});
+
+			moveToDoneDiv.addEventListener('click', function(e) {
+				dueActionsDiv.style.display = "none";
+				dueIcon.classList.remove('fa-clock-o');
+				dueIcon.classList.add('fa-spinner', 'fa-spin');
+				if (that.onMoveToDoneClickCallback) that.onMoveToDoneClickCallback(boardShortLink, cardId);
+			});
+		}
+
+		_installToggleDescCollapseClickHandlerForCard(cardDiv) {
+			var descDiv = cardDiv.getElementsByClassName('desc')[0];
+			var toggleButtonWrapper = cardDiv.getElementsByClassName('toggleDescCollapseWrapper')[0];
+			var toggleButton = cardDiv.getElementsByClassName('toggleDescCollapse')[0];
+			
+			if (descDiv.scrollHeight > descDiv.clientHeight) {
+				// restore card expanded state
+				var cardId = cardDiv.dataset.cardId;
+				if (this._isSelectedDateToday() && this.expandedCards[cardId]) {
+					cardDiv.classList.add('expanded');
+				}
+
+				toggleButtonWrapper.style.display = "flex"; // make it visible
+
+				var that = this;
+				
+				toggleButton.addEventListener('click', function(e) {
+					cardDiv.classList.toggle("expanded");
+
+					if (that._isSelectedDateToday()) {
+						var cardId = cardDiv.dataset.cardId;
+						that.expandedCards[cardId] = cardDiv.classList.contains('expanded');
+					}
+				});
+			}
+		}
+
+		_installCheckItemClickHandlerForCard(cardDiv) {
+			var that = this;
+			cardDiv.querySelectorAll('.checkItemStateIcon').forEach(function(checkItemStateIcon) {
+				var checkItem = checkItemStateIcon.parentNode;
+				
+				var cardId = cardDiv.dataset.cardId;
+				var checkItemId = checkItem.dataset.checkItemId;
+				var isChecked = checkItem.dataset.checkItemState == "complete";
+
+				checkItemStateIcon.addEventListener('click', function(e) {
+					checkItemStateIcon.classList.remove('fa-check-square-o', 'fa-square-o');
+					checkItemStateIcon.classList.add('fa-spinner', 'fa-spin');
+					if (that.onCheckItemClickCallback) that.onCheckItemClickCallback(cardId, checkItemId, isChecked);
+				});
+			});
+		}
+
+		_installClickHandlersForCard(cardDiv) {
+			this._installCardNameClickHandlerForCard(cardDiv);
+			this._installDueActionClickHandlerForCard(cardDiv);
+			this._installToggleDescCollapseClickHandlerForCard(cardDiv);
+			this._installCheckItemClickHandlerForCard(cardDiv);
+		}
+
+		_installClickHandlers() {
+			this._installBoardNameClickHandler();
+
+			var cardDivs = document.getElementsByClassName('card');
+			for (const cardDiv of cardDivs) {
+				this._installClickHandlersForCard(cardDiv);
+			}
+		}
+
+		_updateTodayButton() {
+			if (this.formatDateStr(new Date()) == document.getElementById("date").value) {
+				document.getElementById("today").classList.add("today");
+			} else {
+				document.getElementById("today").classList.remove("today");
+			}
+		}
+
+		_isSelectedDateToday() {
+			return document.getElementById("today").classList.contains('today');
+		}
+
+		_setDateInput(date) {
+			document.getElementById("date").value = this.formatDateStr(date);
+			if (document.getElementById("date").onchange) {
+				document.getElementById("date").onchange();
+			}
+		}
+
+		_findCardDivByCardId(cardId) {
+			var cardDivs = document.getElementsByClassName('card');
+			for (const cardDiv of cardDivs) {
+				if (cardId == cardDiv.dataset.cardId) {
+					return cardDiv;
+				}
+			}
+
+			return null;
+		}
+
+		_prepareMainUiEventHandlers() {
+			var that = this;
+
+			document.getElementById("logoImg").onclick = function() {
+				if (that.onTrelloLogoClickCallback) that.onTrelloLogoClickCallback();
+			}
+
+			document.getElementById("serverStatusIndicator").onclick = function() {
+				var logArea = document.getElementById('logArea');
+				if (logArea.style.display === "none") {
+					logArea.style.display = "block";
+				} else {
+					logArea.style.display = "none";
+				}
+			};
+
+			document.getElementById("logLevel").onchange = function() {
+				var logLevel = document.getElementById("logLevel").value;
+				if (that.onLogLevelChangeCallback) that.onLogLevelChangeCallback(logLevel);
+			};
+			
+			document.getElementById("prev").onclick = function() {
+				var date = new Date(document.getElementById("date").value);
+				date.setDate(date.getDate() - 1);
+				that._setDateInput(date);
+			};
+			
+			document.getElementById("today").onclick = function() {
+				that._setDateInput(new Date());
+			};
+			
+			document.getElementById("next").onclick = function() {
+				var date = new Date(document.getElementById("date").value);
+				date.setDate(date.getDate() + 1);
+				that._setDateInput(date);
+			};
+			
+			document.getElementById("date").onchange = function() {
+				if (document.getElementById("date").value == "") { // user cleared date input
+					document.getElementById("date").value = that.formatDateStr(new Date()); // fix it with today
+				}
+				
+				that._updateTodayButton();
+
+				if (that.onDateInputChangeCallback) that.onDateInputChangeCallback();
+			};
+		}
+
+		_refreshDueColorWatchDog() {
+			var that = this;
+			this.refreshDueColorInterval = window.setInterval(function() {
+				that.logger.debug("UiView._refreshDueColorWatchDog: checking due ...");
+
+				if (!that._isSelectedDateToday()) {
+					that.logger.debug("UiView._refreshDueColorWatchDog: not showing today's items, no need to check.");
+					return;
+				}
+
+				var now = new Date();
+				document.querySelectorAll('.due.yellow').forEach(function(dueItem) {
+					var dueHourMinute = dueItem.innerText.replace(' ', '').split(':');
+					var dueHour = dueHourMinute[0];
+					var dueMinute = dueHourMinute[1];
+					var dueSecond = "00";
+					var dueDate = new Date();
+					dueDate.setHours(dueHour);
+					dueDate.setMinutes(dueMinute);
+					dueDate.setSeconds(dueSecond);
+
+					if (dueDate < now) {
+						that.logger.info("UiView._refreshDueColorWatchDog: an item becomes due.");
+
+						dueItem.classList.remove("yellow");
+						dueItem.classList.add("red");
+					}
+				});
+			}, 60 * 1000);
+		}
+
+		// public APIs -----------------------------------------------------------
+
+		formatDateStr(date, delimiter='-') {
+			var dd = String(date.getDate()).padStart(2, '0');
+			var mm = String(date.getMonth() + 1).padStart(2, '0'); //January is 0!
+			var yyyy = date.getFullYear();
+
+			var dateStr = yyyy + delimiter + mm + delimiter + dd;
+			return dateStr;
+		}
+
+		getSelectedDateStr() {
+			return document.getElementById("date").value;
+		}
+
+		showHasDueBefore(hasDue) {
+			document.getElementById('prev').disabled = !hasDue;
+		}
+
+		showHasDueAfter(hasDue) {
+			document.getElementById('next').disabled = !hasDue;
+		}
+
+		setServerMethodAndStatus(serverMethod, serverStatus) {
+			document.getElementById("serverMethod").innerHTML = serverMethod;
+
+			document.getElementById("serverStatusIndicator").classList.remove("open", "error", "warning", "close");
+			document.getElementById("serverStatusIndicator").classList.add(serverStatus);
+		}
+
+		setLogLevelList(logLevelList) {
+			var logLevelSelect = document.getElementById("logLevel");
+			for (const logLevelObj of logLevelList) {
+				var option = document.createElement("option");
+				option.value = logLevelObj.logLevel;
+				option.text = logLevelObj.name;
+				logLevelSelect.appendChild(option);
+			}
+		}
+
+		setLogLevel(logLevel) {
+			document.getElementById("logLevel").value = logLevel;
+		}
+
+		log(logMessageClass, msg) {
+			var logMessages = document.getElementById('logMessages');
+			if (logMessages.children.length >= 50) {
+				logMessages.removeChild(
+					logMessages.getElementsByTagName('div')[0]
+				);
+			}
+			
+			var newElement = document.createElement('div');
+			newElement.innerHTML = msg;
+			newElement.classList.add(logMessageClass);
+			logMessages.appendChild(newElement);
+		}
+
+		showLoading() {
+			document.getElementById('cardsArea').innerHTML = UiView._LoadingHtml;
+		}
+
+		showCards(cardsDataArray) {
+			var cardsHtml = CardsHtmlMaker.MakeCardsHtml(cardsDataArray);
+
+			if (cardsHtml != "") {
+				document.getElementById('cardsArea').innerHTML = cardsHtml;
+				this._installClickHandlers();
+			} else {
+				var dateStr = document.getElementById("date").value;
+				document.getElementById('cardsArea').innerHTML =
+					this._isSelectedDateToday() ?
+						UiView._NoCardsDueTodayHtml : UiView._NoCardsDueTemplate.replace("{dateStr}", dateStr);
+			}
+		}
+
+		hasCard(cardId) {
+			return this._findCardDivByCardId(cardId) != null;
+		}
+
+		updateCard(card) {
+			var cardDiv = this._findCardDivByCardId(card.id);
+			if (cardDiv) {
+				var cardHtml = CardsHtmlMaker.MakeCardHtml(card);
+				cardDiv.outerHTML = cardHtml;
+
+				cardDiv = this._findCardDivByCardId(card.id); // cardDiv is a new one now
+				this._installClickHandlersForCard(cardDiv);
+			}
+		}
+
+		start() {
+			CardsHtmlMaker.SetLogger(Logger);
+			this._prepareMainUiEventHandlers();
+			this._refreshDueColorWatchDog();
+		}
+
+		newDay() {
+			this.expandedCards = {};
+			this._setDateInput(new Date());
+		}
+	}
+
+	// ---------------------
+	// app
+	// ---------------------
+	class TrelloTodayApp {
+		static _IgnoredActionTypes = [
+			"action_comment_on_card",
+		];
+
+		constructor(webSocketServerAddr, trelloBoardShortLinkStr, trelloAppKey, trelloAppToken, trelloDesktopAppUrl) {
+			this.webSocketServerAddr = webSocketServerAddr;
+			this.trelloBoardShortLinkStr = trelloBoardShortLinkStr;
+			this.trelloAppKey = trelloAppKey;
+			this.trelloAppToken = trelloAppToken;
+			this.trelloDesktopAppUrl = trelloDesktopAppUrl == "" ? "trello://" : trelloDesktopAppUrl;
+
+			this.todayStr = "";
+			this.actionData = null;
+		}
+
+		// private methods -----------------------------------------------------------
+
+		_isIgnoredActionType(actionType) {
+			return TrelloTodayApp._IgnoredActionTypes.includes(actionType);
+		}
+
+		_getCardFromCardsDataObj(cardsDataObj, cardId) {
+			for (const cardsData of cardsDataObj.cardsDataArray) {
+				for (const card of cardsData.cards) {
+					if (card.id == cardId) {
+						return card;
+					}
+				}
+			}
+
+			return null;
+		}
+
+		_updateAllCards() {
+			this.view.showLoading();
+
+			var that = this;
+			window.setTimeout(function() {
+				var dateStr = that.view.getSelectedDateStr();
+				var cardsDataObj = that.trelloDataManager.getCardsDataForDate(dateStr);
+				
+				that.view.showHasDueBefore(cardsDataObj.hasDueBefore);
+				that.view.showHasDueAfter(cardsDataObj.hasDueAfter);
+				
+				that.view.showCards(cardsDataObj.cardsDataArray);
+			}, 100);
+		}
+
+		_updateOneCard() {
+			var dateStr = this.view.getSelectedDateStr();
+			var cardsDataObj = this.trelloDataManager.getCardsDataForDate(dateStr);
+			
+			this.view.showHasDueBefore(cardsDataObj.hasDueBefore);
+			this.view.showHasDueAfter(cardsDataObj.hasDueAfter);
+			
+			var cardToBeUpdated = this._getCardFromCardsDataObj(cardsDataObj, this.actionData.card.id);
+			this.view.updateCard(cardToBeUpdated);
+		}
+
+		_updateHasBeforeAndAfter() {
+			var dateStr = this.view.getSelectedDateStr();
+			var cardsDataObj = this.trelloDataManager.getCardsDataForDate(dateStr);
+			
+			this.view.showHasDueBefore(cardsDataObj.hasDueBefore);
+			this.view.showHasDueAfter(cardsDataObj.hasDueAfter);
+		}
+
+		_updateCardsOptimized() {
+			var boardShortLink = this.actionData.board.shortLink;
+			var cardId = this.actionData.card.id;
+			var dateStr = this.view.getSelectedDateStr();
+			var hasCardInUpdatedData = this.trelloDataManager.hasCardForDate(boardShortLink, cardId, dateStr);
+			var viewHasCard = this.view.hasCard(this.actionData.card.id);
+			
+			if (hasCardInUpdatedData != viewHasCard) {
+				this._updateAllCards();
+			} else if (hasCardInUpdatedData && viewHasCard) {
+				this._updateOneCard();
+			} else {
+				this._updateHasBeforeAndAfter();
+			}
+		}
+
+		_startNewDay() {
+			Logger.info("TrelloTodayApp._startNewDay: start a new day");
+
+			this.view.newDay();
+			this.todayStr = this.view.getSelectedDateStr();
+		}
+
+		_startNewDayWatchDog() {
+			var that = this;
+			this.startNewDayWatchDogInterval = window.setInterval(function() {
+				var nowDateString = that.view.formatDateStr(new Date());
+				if (nowDateString != that.todayStr) {
+					Logger.debug("TrelloTodayApp._startNewDayWatchDog: today is [" + nowDateString + "] and todayStr is [" + that.todayStr + "].");
+					that._startNewDay();
+				} else {
+					Logger.debug("TrelloTodayApp._startNewDayWatchDog: today is [" + nowDateString + "] and todayStr is [" + that.todayStr + "].");
+				}
+			}, 60 * 1000);
+		}
+
+		// callback handlers -----------------------------------------------------------
+
+		_Logger_onLog(logLevelName, msg) {
+			var logMessageClass = logLevelName.toLowerCase();
+			var firstLine = msg.split('\n')[0];
+			this.view.log(logMessageClass, firstLine);
+		}
+
+		_Ui_onTrelloLogoClick() {
+			window.open(this.trelloDesktopAppUrl);
+		}
+
+		_Ui_onDateInputChange() {
+			this._updateAllCards();
+		}
+
+		_Ui_onLogLevelChange(logLevel) {
+			Logger.SetLogLevel(logLevel);
+		}
+
+		_Ui_onBoardNameClick(boardShortUrl) {
+			window.open(boardShortUrl.replace("https://", this.trelloDesktopAppUrl));
+		}
+
+		_Ui_onCardNameClick(cardShortUrl) {
+			window.open(cardShortUrl.replace("https://", this.trelloDesktopAppUrl));
+		}
+
+		_Ui_onSetDueTodayClick(boardShortLink, cardId) {
+			window.setTimeout(function() {
+				var date = new Date();
+				date.setHours(15, 0, 0, 0);
+				TrelloApi.UpdateCardSetDueDate(cardId, date);
+			}, 100);
+		}
+
+		_Ui_onSetDueOneDayLaterClick(boardShortLink, cardId) {
+			var dateStr = this.view.getSelectedDateStr();
+			var date = new Date(dateStr);
+			date.setHours(15, 0, 0, 0);
+			date.setDate(date.getDate() + 1);
+			window.setTimeout(function() {
+				TrelloApi.UpdateCardSetDueDate(cardId, date);
+			}, 100);
+		}
+
+		_Ui_onSetDueOneWeekLaterClick(boardShortLink, cardId) {
+			var dateStr = this.view.getSelectedDateStr();
+			var date = new Date(dateStr);
+			date.setHours(15, 0, 0, 0);
+			date.setDate(date.getDate() + 7);
+			window.setTimeout(function() {
+				TrelloApi.UpdateCardSetDueDate(cardId, date);
+			}, 100);
+		}
+
+		_Ui_onMoveToDoneClick(boardShortLink, cardId) {
+			var lists = this.trelloDataManager.getLists(boardShortLink);
+			var lastList = lists[lists.length - 1]; // assume last list is "Done"
+			var lastListId = lastList.id;
+			window.setTimeout(function() {
+				TrelloApi.UpdateCardSetDueDate(cardId, null);
+				TrelloApi.UpdateCardMoveToList(cardId, lastListId);
+			}, 100);
+		}
+
+		_Ui_onCheckItemClick(cardId, checkItemId, isChecked) {
+			var changeTo_isChecked = !isChecked;
+			window.setTimeout(function() {
+				TrelloApi.UpdateCardSetCheckItemChecked(cardId, checkItemId, changeTo_isChecked);
+			}, 100);
+		}
+
+		_TrelloDataManager_onCardsLoaded(boardShortLink) {
+			if (this.actionData) {
+				this._updateCardsOptimized();
+
+				this.actionData = null; // must set this to null after used
+			} else {
+				this._updateAllCards();
+			}
+		}
+
+		_Subscriber_onWelcomeMsg(msgObj) {
+			var boardShortLinks = this.trelloDataManager.getBoardShortLinks();
+			for (const boardShortLink of boardShortLinks) {
+				this.webSocketSubscriber.subscribe(boardShortLink);
+			}
+		}
+
+		_Subscriber_onPublishMsg(msgObj) {
+			var actionType = msgObj.value.action.display.translationKey;
+
+			Logger.info("TrelloTodayApp._Subscriber_onPublishMsg: .date = [" + msgObj.date + "], actionType = [" + actionType + "]");
+			
+			if (this._isIgnoredActionType(actionType)) {
+				Logger.info("TrelloTodayApp._Subscriber_onPublishMsg: ignore this actionType");
+			} else {
+				this.actionData = msgObj.value.action.data;
+				if (this.actionData.card == null) {
+					this.actionData = null;
+				}
+				var boardShortLink = msgObj.key;
+				this.trelloDataManager.loadToDate(new Date(msgObj.date), boardShortLink);
+			}
+		}
+
+		_Subscriber_onSubscribeSuccessMsg(msgObj) {
+			var cached_msgObj = msgObj.value.cachedPublishData;
+			if (cached_msgObj) {
+				Logger.info("TrelloTodayApp._Subscriber_onSubscribeSuccessMsg: value.cachedPublishData.date = [" + cached_msgObj.date + "]");
+				var boardShortLink = cached_msgObj.key;
+				this.trelloDataManager.loadToDate(new Date(cached_msgObj.date), boardShortLink);
+			}
+		}
+
+		_Subscriber_onStatusUpdate(status) {
+			this.view.setServerMethodAndStatus("Push", status);
+		}
+
+		// public APIs -----------------------------------------------------------
+
+		start() {
+			var that = this;
+			
+			// init static tools
+			Logger.SetLogCallback(function(logLevelName, msg) {
+				that._Logger_onLog(logLevelName, msg);
+			});
+
+			TrelloApi.SetAppKeyAndToken(this.trelloAppKey, this.trelloAppToken);
+			TrelloApi.SetLogger(Logger);
+
+			// create modules
+			this.view = new UiView(
+				{
+					onTrelloLogoClickCallback : function() {
+						that._Ui_onTrelloLogoClick();
+					},
+					onDateInputChangeCallback : function() {
+						that._Ui_onDateInputChange();
+					},
+					onLogLevelChangeCallback : function(logLevel) {
+						that._Ui_onLogLevelChange(logLevel);
+					},
+
+					onBoardNameClickCallback : function(boardShortUrl) {
+						that._Ui_onBoardNameClick(boardShortUrl);
+					},
+
+					onCardNameClickCallback : function(cardShortUrl) {
+						that._Ui_onCardNameClick(cardShortUrl);
+					},
+
+					onSetDueTodayClickCallback : function(boardShortLink, cardId) {
+						that._Ui_onSetDueTodayClick(boardShortLink, cardId);
+					},
+					onSetDueOneDayLaterClickCallback : function(boardShortLink, cardId) {
+						that._Ui_onSetDueOneDayLaterClick(boardShortLink, cardId);
+					},
+					onSetDueOneWeekLaterClickCallback : function(boardShortLink, cardId) {
+						that._Ui_onSetDueOneWeekLaterClick(boardShortLink, cardId);
+					},
+					onMoveToDoneClickCallback : function(boardShortLink, cardId) {
+						that._Ui_onMoveToDoneClick(boardShortLink, cardId);
+					},
+
+					onCheckItemClickCallback : function(cardId, checkItemId, isChecked) {
+						that._Ui_onCheckItemClick(cardId, checkItemId, isChecked);
+					},
+				},
+				Logger
+			);
+
+			this.trelloDataManager = new TrelloDataManager(
+				this.trelloBoardShortLinkStr,
+				function(boardShortLink) {
+					that._TrelloDataManager_onCardsLoaded(boardShortLink);
+				},
+				Logger
+			);
+
+			this.webSocketSubscriber = new WebSocketSubscriber(
+				this.webSocketServerAddr,
+				{
+					onWelcomeMsgCallback : function(msgObj) {
+						that._Subscriber_onWelcomeMsg(msgObj);
+					},
+					onPublishMsgCallback : function(msgObj) {
+						that._Subscriber_onPublishMsg(msgObj);
+					},
+					onSubscribeSuccessMsgCallback : function(msgObj) {
+						that._Subscriber_onSubscribeSuccessMsg(msgObj);
+					},
+					onStatusUpdateCallback : function(status) {
+						that._Subscriber_onStatusUpdate(status);
+					},
+				},
+				Logger
+			);
+
+			// some preparing work
+			this.view.setLogLevelList(Logger.GetLogLevelList());
+			this.view.setLogLevel(Logger.GetLogLevel());
+			this.view.start();
+			this.trelloDataManager.loadToDate(new Date());
+
+			// app start
+			this._startNewDay();
+			this._startNewDayWatchDog();
+
+			// start receiving updates
+			this.webSocketSubscriber.start();
+		}
+	}
+
+	// ---------------------
+	// HTML start
+	// ---------------------
+	window.onload = function() {
+		var WebSocketServerAddr = "wss://149.28.204.205:8081";
+
+		// public parameters
+		var BoardShortLink = findGetParameter("BoardShortLink"); // can be multiple connected with ","
+		var AppKey = findGetParameter("AppKey");
+		var AppToken = findGetParameter("AppToken");
+		
+		// private/experimental parameters
+		var DesktopAppUrl = findGetParameter("DesktopAppUrl");
+
+		var BgColor = findGetParameter("BgColor");
+		if (BgColor != "") {
+			document.body.style.backgroundColor = '#' + BgColor;
+		}
+
+		var Title = findGetParameter("Title");
+		if (Title != "") {
+			document.title = Title;
+		}
+
+		// start app with parameters
+		if (BoardShortLink == "" || AppKey == "" || AppToken == "") {
+			window.alert("Make sure that BoardShortLink, AppKey, AppToken parameters are not empty!");
+		} else {
+			var trelloTodayApp = new TrelloTodayApp(WebSocketServerAddr, BoardShortLink, AppKey, AppToken, DesktopAppUrl);
+			trelloTodayApp.start();
+
+			window.app = trelloTodayApp;
+		}
+	};
+</script>
+<style>
+	:root {
+		--main-bg-color: #154f85;
+		--main-text-color: black;
+		
+		--text-light-color: white;
+		--text-highlight-color: rgb(14, 167, 180);
+
+		--menu-bg-color: #4b4b4b;
+		--menu-item-highlight-color: rgb(122, 122, 122);
+		
+		--button-bg-color: white;
+		--button-highlight-bg-color: #121F3C;
+		--button-transparent-bg-color: rgba(36, 36, 36, 0.5);
+		
+		--indicator-color-grey: grey;
+		--indicator-color-red: red;
+		--indicator-color-yellow: yellow;
+		--indicator-color-green: green;
+
+		--card-bg-color: #F1F2F5;
+
+		--label-color-red: #E34336;
+		--label-color-sky: #17B6D8;
+		--label-color-green: #52B33F;
+		--label-color-yellow: #EED009;
+		--label-color-purple: #B45CD8;
+		--label-color-orange: #FD8D16;
+		--label-color-blue: #0C63B2;
+		--label-color-lime: #48E786;
+		--label-color-pink: #FB5BC0;
+		--label-color-black: #273550;
+		--label-color-null: #A4ABB9;
+
+		--due-color-yellow: #EED009;
+		--due-color-yellow-hover: #dec20c;
+		--due-color-red: #E34336;
+		--due-color-red-hover: #c43f34;
+
+		--log-bg-color: #282828e6;
+		--log-text-color-red: rgb(240 125 125);
+		--log-text-color-yellow: rgb(233 204 142);
+		--log-text-color-lime: rgb(98 196 240);
+		--log-text-color-blue: rgb(13 134 255);
+	}
+	body {
+		background-color: var(--main-bg-color);
+		font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Noto Sans,Ubuntu,Droid Sans,Helvetica Neue,sans-serif;
+	}
+	a {
+		color: var(--main-text-color);
+	}
+	p {
+		margin: 0px;
+	}
+	p + p {
+		margin-top: 8px;
+	}
+	#main {
+		display: flex;
+		flex-direction: column;
+		height: 97vh;
+		color: var(--main-text-color);
+	}
+	#topBar {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-left: 6px;
+		margin-right: 6px;
+	}
+	#logo {
+		margin-top: 3px;
+	}
+	#logoImg {
+		width: 18px;
+		height: 18px;
+		cursor: pointer;
+	}
+	#dateControls {
+		text-align: center;
+	}
+	.dateInput {
+		border-radius: 4px;
+		border: none;
+		cursor: pointer;
+	}
+	.dateNav {
+		border-radius: 4px;
+		border: none;
+		background-color: var(--button-bg-color);
+		cursor: pointer;
+	}
+	.dateNav.today {
+		background-color: var(--button-highlight-bg-color);
+		color: var(--text-light-color);
+	}
+	#serverStatus {
+		color: var(--text-light-color);
+		font-size: smaller;
+	}
+	#serverStatusIndicator {
+		background-color: var(--indicator-color-grey);
+		border-radius: 50%;
+		width: 10px;
+		height: 10px;
+		display: inline-block;
+		cursor: pointer;
+	}
+	#serverStatusIndicator.open {
+		background-color: var(--indicator-color-green);
+	}
+	#serverStatusIndicator.warning {
+		background-color: var(--indicator-color-yellow);
+	}
+	#serverStatusIndicator.error {
+		background-color: var(--indicator-color-red);
+	}
+	#serverStatusIndicator.close {
+		background-color: var(--indicator-color-grey);
+	}
+	#cardsArea {
+		margin-top: 4px;
+		flex-grow: 1;
+		border-radius: 6px;
+		margin-left: -6px;
+		margin-right: -6px;
+		overflow: auto;
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+	.loadingInfo {
+		margin-top: 200px;
+		color: var(--text-light-color);
+		text-align: center;
+		font-size: large;
+	}
+	.noCardIcon {
+		margin-top: 128px;
+		text-align: center;
+		font-size: 128px;
+		color: var(--text-light-color);
+	}
+	.noCardInfo {
+		color: var(--text-light-color);
+		text-align: center;
+		font-size: large;
+	}
+	.boardNameArea {
+		margin-top: 6px;
+		margin-bottom: 6px;
+	}
+	.boardName {
+		font-weight: bold;
+		color: var(--text-light-color);
+		cursor: pointer;
+	}
+	.boardName:hover {
+		text-decoration: underline;
+	}
+	.card {
+		border-radius: 6px;
+		background-color: var(--card-bg-color);
+		padding: 2px;
+		padding-left: 12px;
+		padding-right: 12px;
+	}
+	.card + .card {
+		margin-top: 6px;
+	}
+	.header {
+		padding-top: 4px;
+		font-size: smaller;
+		font-weight: bold;
+	}
+	.list {
+	}
+	.labels {
+		margin-left: 8px;
+		padding-left: 10px;
+		border-left: 1px dotted gray;
+	}
+	.label {
+		margin-top: 2px;
+		margin-right: 6px;
+		border-radius: 4px;
+		padding: 2px;
+		padding-left: 6px;
+		padding-right: 6px;
+		min-width: 20px;
+		height: 16px;
+		background-color: var(--label-color-null);
+		color: var(--text-light-color);
+		display: inline-block;
+	}
+	.label.red {
+		background-color: var(--label-color-red);
+	}
+	.label.sky {
+		background-color: var(--label-color-sky);
+	}
+	.label.green {
+		background-color: var(--label-color-green);
+	}
+	.label.yellow {
+		background-color: var(--label-color-yellow);
+	}
+	.label.purple {
+		background-color: var(--label-color-purple);
+	}
+	.label.orange {
+		background-color: var(--label-color-orange);
+	}
+	.label.blue {
+		background-color: var(--label-color-blue);
+	}
+	.label.lime {
+		background-color: var(--label-color-lime);
+	}
+	.label.pink {
+		background-color: var(--label-color-pink);
+	}
+	.label.black {
+		background-color: var(--label-color-black);
+	}
+	.label.null {
+		background-color: var(--label-color-null);
+	}
+	.nameArea {
+		margin-top: 8px;
+		margin-bottom: 8px;
+	}
+	.name {
+		font-weight: bold;
+		cursor: pointer;
+	}
+	.name:hover {
+		text-decoration: underline;
+	}
+	.dueArea {
+		display: inline-block;
+	}
+	.due {
+		margin-top: 6px;
+		margin-bottom: 6px;
+		border-radius: 4px;
+		color: var(--text-light-color);
+		padding: 2px;
+		padding-left: 6px;
+		padding-right: 6px;
+		background-color: var(--due-color-yellow);
+		cursor: pointer;
+	}
+	.due.yellow {
+		background-color: var(--due-color-yellow);
+	}
+	.due.red {
+		background-color: var(--due-color-red);
+	}
+	.dueArea:hover .due.yellow {
+		background-color: var(--due-color-yellow-hover);
+	}
+	.dueArea:hover .due.red {
+		background-color: var(--due-color-red-hover);
+	}
+	.dueActions {
+		display: none;
+		position: absolute;
+		border-radius: 4px;
+		box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+		z-index: 1;
+		background-color: var(--menu-bg-color);
+		color: var(--text-light-color);
+		font-size: smaller;
+		margin-top: 2px;
+		padding-top: 6px;
+		padding-bottom: 6px;
+	}
+	.dueArea:hover .dueActions {
+		display: block;
+	}
+	.dueAction {
+		height: 20px;
+		padding-left: 6px;
+		padding-right: 6px;
+		padding-top: 2px;
+		cursor: pointer;
+	}
+	.dueAction:hover {
+		background-color: var(--menu-item-highlight-color);
+	}
+	.desc {
+		margin-top: 6px;
+		margin-bottom: 6px;
+		display: -webkit-box;
+		-webkit-line-clamp: 5;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.card.expanded .desc {
+		-webkit-line-clamp: 999;
+	}
+	.toggleDescCollapseWrapper {
+		display: none; /* to make this visible, change it to 'flex' */
+		margin-right: -10px;
+	}
+	.toggleDescCollapse {
+		color: var(--text-light-color);
+		cursor: pointer;
+		text-align: center;
+		background-color: var(--button-transparent-bg-color);
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		margin-top: -24px;
+		margin-left: auto;
+		visibility: hidden;
+	}
+	.card:hover .toggleDescCollapse {
+		visibility: visible;
+	}
+	.toggleDescCollapse::after {
+		content: "+";
+		vertical-align: middle;
+	}
+	.card.expanded .toggleDescCollapse::after {
+		content: "-";
+	}
+	.horizontalLine {
+		border: none;
+		border-bottom: dashed 1px grey;
+	}
+	.checkItems {
+		margin-top: 6px;
+		margin-bottom: 6px;
+	}
+	.checkItem {
+		display: flex;
+	}
+	.checkItemStateIcon {
+		width: 16px;
+		height: 16px;
+		margin-top: 2px;
+		cursor: pointer;
+	}
+	.checkItemStateIcon:hover {
+		color: var(--text-highlight-color);
+	}
+	.checkItemName {
+		margin-left: 12px;
+	}
+	.cardCountInfo {
+		margin-top: 4px;
+		color: var(--text-light-color);
+		font-size: small;
+		text-align: right;
+	}
+	#logArea {
+		color: var(--text-light-color);
+		position: fixed;
+		background-color: var(--log-bg-color);
+		left: 0px;
+		top: 36px;
+		width: 100%;
+		height: 92%;
+		font-size: x-small;
+	}
+	#logArea a {
+		color: var(--text-light-color);
+	}
+	#logLevelControl {
+		position: absolute;
+		top: 10px;
+		right: 8px;
+	}
+	#logMessages {
+		margin-left: 8px;
+		margin-right: 12px;
+		height: 90%;
+		overflow-y: scroll;
+	}
+	#logMessages > .log {
+		color: var(--text-light-color);
+	}
+	#logMessages > .error {
+		color: var(--log-text-color-red);
+	}
+	#logMessages > .warning {
+		color: var(--log-text-color-yellow);
+	}
+	#logMessages > .info {
+		color: var(--log-text-color-lime);
+	}
+	#logMessages > .debug {
+		color: var(--log-text-color-blue);
+	}
+</style>
+</head>
+<body>
+	<div id="main">
+		<div id="topBar">
+			<div id="logo">
+				<img id="logoImg" src="Trello.png">
+			</div>
+			<div id="dateControls">
+				<input type="date" class="dateInput" id="date">
+				<input type="button" class="dateNav" id="prev" value="<">
+				<input type="button" class="dateNav today" id="today" value="Today">
+				<input type="button" class="dateNav" id="next" value=">">
+			</div>
+			<div id="serverStatus">
+				<span id="serverMethod"></span>
+				<span id="serverStatusIndicator"></span>
+			</div>
+		</div>
+		<div id="cardsArea"></div>
+	</div>
+	<div id="logArea" style="display: none;">
+		<h2>Log</h2>
+		<div id="logLevelControl">
+			Level:
+			<select id="logLevel"></select>
+		</div>
+		<div id="logMessages"></div>
+	</div>
+</body>
+</html>
