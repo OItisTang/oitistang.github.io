@@ -660,8 +660,7 @@
 	// app
 	// ---------------------
 	class AwaApp {
-		constructor() {
-		}
+		constructor() {}
 
 		// callback handlers -----------------------------------------------------------
 
@@ -694,7 +693,7 @@
 			var emailDomain = people.emails[0].split('@').pop();
 			createCookie('emailDomain', emailDomain);
 
-			this.view.setInputPlaceholder('ID(@' + emailDomain + ') or email to watch');
+			this._updateEmailInputPlaceholder(emailDomain);
 		}
 
 		_WebexPeopleWatcher_onPeopleUpdated(people) {
@@ -736,6 +735,19 @@
 
 			this.view.showReauthenticate();
 			this.view.showNotification("Refresh token expired, please re-authenticate!");
+		}
+
+		// private functions -----------------------------------------------------------
+
+		_updateEmailInputPlaceholder(emailDomain) {
+			this.view.setInputPlaceholder('ID(@' + emailDomain + ') or email to watch');
+		}
+
+		_checkEmailDomain() {
+			var emailDomain = getCookie('emailDomain');
+			if (emailDomain != '') {
+				this._updateEmailInputPlaceholder(emailDomain);
+			}
 		}
 
 		// public APIs -----------------------------------------------------------
@@ -795,6 +807,7 @@
 			WebexApi.SetAccessToken(this.authentication.getAccessToken());
 			this.view.start();
 			this.webexPeopleWatcher.start();
+			this._checkEmailDomain();
 		}
 	}
 
