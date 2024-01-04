@@ -435,6 +435,10 @@
 			document.getElementById("email").value = "";
 		}
 
+		setInputPlaceholder(text) {
+			document.getElementById("email").placeholder = text;
+		}
+
 		setServerMethodAndStatus(serverMethod, serverStatus) {
 			var serverMethodIconHtml = serverMethod == 'active' ? UiView._WatchingIconHtml : UiView._NotWatchingIconHtml;
 			document.getElementById("serverMethod").innerHTML = serverMethodIconHtml;
@@ -689,6 +693,8 @@
 
 			var emailDomain = people.emails[0].split('@').pop();
 			createCookie('emailDomain', emailDomain);
+
+			this.view.setInputPlaceholder('ID(@' + emailDomain + ') or email to watch');
 		}
 
 		_WebexPeopleWatcher_onPeopleUpdated(people) {
@@ -1168,7 +1174,7 @@
 				<img id="logoImg" src="icon.png">
 			</div>
 			<div id="inputArea">
-				<input type="text" id="email" class="emailInput" placeholder="email or ID to watch" size="24" autofocus>
+				<input type="text" id="email" class="emailInput" placeholder="email to watch" size="30" autofocus>
 				<button id="watchBtn" class="watchBtn" title="Start watching"><i class="fa fa-plus"></i></button>
 			</div>
 			<div id="serverStatus">
