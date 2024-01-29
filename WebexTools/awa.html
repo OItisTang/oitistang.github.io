@@ -210,6 +210,10 @@
 
 		// public APIs -----------------------------------------------------------
 
+		getPeople(email) {
+			return this.peopleDict[email];
+		}
+
 		addPeople(email) {
 			if (this.isStopped) return;
 
@@ -290,8 +294,8 @@
 					<div class="status">{status}</div>
 				</div>
 				<div class="actionsArea">
-					<div class="action chatAction" onclick="window.location='webexteams://im?email={email}';"><i class="actionIcon fa fa-comment"></i></div>
-					<div class="action callAction" onclick="window.location='webextel://{email}';"><i class="actionIcon fa fa-video-camera"></i></div>
+					<div class="action chatAction"><i class="actionIcon fa fa-comment"></i></div>
+					<div class="action callAction"><i class="actionIcon fa fa-video-camera"></i></div>
 				</div>
 			</div>
 		`;
@@ -369,9 +373,11 @@
 		static _WatchingIconHtml = `<i class="fa fa-eye"></i>`;
 		static _NotWatchingIconHtml = `<i class="fa fa-eye-slash"></i>`;
 
-		constructor(onWatchCallback, onLogLevelChangeCallback) {
+		constructor(onWatchCallback, onLogLevelChangeCallback, onChatActionClickCallback, onCallActionClickCallback) {
 			this.onWatchCallback = onWatchCallback;
 			this.onLogLevelChangeCallback = onLogLevelChangeCallback;
+			this.onChatActionClickCallback = onChatActionClickCallback;
+			this.onCallActionClickCallback = onCallActionClickCallback;
 		}
 
 		// private methods -----------------------------------------------------------
@@ -427,6 +433,21 @@
 				var logLevel = document.getElementById("logLevel").value;
 				if (that.onLogLevelChangeCallback) that.onLogLevelChangeCallback(logLevel);
 			};
+		}
+
+		_installActionButtonClickHandlers(peopleDiv) {
+			var email = peopleDiv.id;
+			var that = this;
+
+			var chatAction = peopleDiv.getElementsByClassName('chatAction')[0];
+			chatAction.addEventListener('click', function(e) {
+				if (that.onChatActionClickCallback) that.onChatActionClickCallback(email);
+			});
+
+			var callAction = peopleDiv.getElementsByClassName('callAction')[0];
+			callAction.addEventListener('click', function(e) {
+				if (that.onCallActionClickCallback) that.onCallActionClickCallback(email);
+			});
 		}
 
 		// public APIs -----------------------------------------------------------
@@ -486,6 +507,7 @@
 
 			var contentArea = document.getElementById('contentArea');
 			contentArea.appendChild(peopleDiv);
+			this._installActionButtonClickHandlers(peopleDiv);
 		}
 
 		updatePeople(people) {
@@ -493,6 +515,9 @@
 			var peopleDiv = document.getElementById(email);
 			if (peopleDiv) {
 				peopleDiv.outerHTML = PeopleHtmlMaker.MakePeopleHtml(people);
+
+				peopleDiv = document.getElementById(email); // peopleDiv is a new one now
+				this._installActionButtonClickHandlers(peopleDiv);
 			}
 		}
 
@@ -685,6 +710,24 @@
 			Logger.SetLogLevel(logLevel);
 		}
 
+		_Ui_onChatActionClick(email) {
+			window.location='webexteams://im?email=' + email;
+
+			var people = this.webexPeopleWatcher.getPeople(email);
+			if (people.status == "active") {
+				this.webexPeopleWatcher.removePeople('email');
+			}
+		}
+
+		_Ui_onCallActionClick(email) {
+			window.location='webextel://' + email;
+
+			var people = this.webexPeopleWatcher.getPeople(email);
+			if (people.status == "active") {
+				this.webexPeopleWatcher.removePeople('email');
+			}
+		}
+
 		_WebexPeopleWatcher_onPeopleAdded(people) {
 			Logger.info("AwaApp._WebexPeopleWatcher_onPeopleAdded " + people.emails[0]);
 
@@ -762,11 +805,20 @@
 
 			WebexApi.SetLogger(Logger);
 
-			this.view = new UiView(function(email) {
-				that._Ui_onWatch(email);
-			}, function(logLevel) {
-				that._Ui_onLogLevelChange(logLevel);
-			});
+			this.view = new UiView(
+				function(email) {
+					that._Ui_onWatch(email);
+				},
+				function(logLevel) {
+					that._Ui_onLogLevelChange(logLevel);
+				},
+				function(email) {
+					that._Ui_onChatActionClick(email);
+				},
+				function(email) {
+					that._Ui_onCallActionClick(email);
+				}
+			);
 			this.view.setLogLevelList(Logger.GetLogLevelList());
 			this.view.setLogLevel(Logger.GetLogLevel());
 
