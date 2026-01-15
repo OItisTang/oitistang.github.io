@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" href="Trello.png">
 <script src="https://oitistang.github.io/3rd-party/HackTimer-1.1.0/HackTimer.min.js"></script>
 <script src="https://oitistang.github.io/Logger/Logger.js"></script>
-<script src="https://oitistang.github.io/WebSocketSubscriberClient/WebSocketSubscriber.js"></script>
+<script src="https://oitistang.github.io/WebSocketPubSubClient/WebSocketPubSubClient.js"></script>
 <link rel="stylesheet" href="https://oitistang.github.io/3rd-party/font-awesome-4.7.0/css/font-awesome.min.css">
 <script src="https://unpkg.com/showdown/dist/showdown.min.js"></script>
 <script type="text/javascript">
@@ -1239,20 +1239,20 @@
 			}
 		}
 
-		_Subscriber_onWelcomeMsg(msgObj) {
+		_PubSub_onWelcomeMsg(msgObj) {
 			var boardShortLinks = this.trelloDataManager.getBoardShortLinks();
 			for (const boardShortLink of boardShortLinks) {
-				this.webSocketSubscriber.subscribe(boardShortLink);
+				this.wsPubSub.subscribe(boardShortLink);
 			}
 		}
 
-		_Subscriber_onPublishMsg(msgObj) {
+		_PubSub_onPublishMsg(msgObj) {
 			var actionType = msgObj.value.action.display.translationKey;
 
-			Logger.info("TrelloTodayApp._Subscriber_onPublishMsg: .date = [" + msgObj.date + "], actionType = [" + actionType + "]");
+			Logger.info("TrelloTodayApp._PubSub_onPublishMsg: .date = [" + msgObj.date + "], actionType = [" + actionType + "]");
 			
 			if (this._isIgnoredActionType(actionType)) {
-				Logger.info("TrelloTodayApp._Subscriber_onPublishMsg: ignore this actionType");
+				Logger.info("TrelloTodayApp._PubSub_onPublishMsg: ignore this actionType");
 			} else {
 				this.actionData = msgObj.value.action.data;
 				if (this.actionData.card == null) {
@@ -1263,16 +1263,16 @@
 			}
 		}
 
-		_Subscriber_onSubscribeSuccessMsg(msgObj) {
+		_PubSub_onSubscribeSuccessMsg(msgObj) {
 			var cached_msgObj = msgObj.value.cachedPublishData;
 			if (cached_msgObj) {
-				Logger.info("TrelloTodayApp._Subscriber_onSubscribeSuccessMsg: value.cachedPublishData.date = [" + cached_msgObj.date + "]");
+				Logger.info("TrelloTodayApp._PubSub_onSubscribeSuccessMsg: value.cachedPublishData.date = [" + cached_msgObj.date + "]");
 				var boardShortLink = cached_msgObj.key;
 				this.trelloDataManager.loadToDate(new Date(cached_msgObj.date), boardShortLink);
 			}
 		}
 
-		_Subscriber_onStatusUpdate(status) {
+		_PubSub_onStatusUpdate(status) {
 			this.view.setServerMethodAndStatus("Push", status);
 		}
 
@@ -1338,20 +1338,20 @@
 				Logger
 			);
 
-			this.webSocketSubscriber = new WebSocketSubscriber(
+			this.wsPubSub = new WebSocketPubSubClient(
 				this.webSocketServerAddr,
 				{
 					onWelcomeMsgCallback : function(msgObj) {
-						that._Subscriber_onWelcomeMsg(msgObj);
+						that._PubSub_onWelcomeMsg(msgObj);
 					},
 					onPublishMsgCallback : function(msgObj) {
-						that._Subscriber_onPublishMsg(msgObj);
+						that._PubSub_onPublishMsg(msgObj);
 					},
 					onSubscribeSuccessMsgCallback : function(msgObj) {
-						that._Subscriber_onSubscribeSuccessMsg(msgObj);
+						that._PubSub_onSubscribeSuccessMsg(msgObj);
 					},
 					onStatusUpdateCallback : function(status) {
-						that._Subscriber_onStatusUpdate(status);
+						that._PubSub_onStatusUpdate(status);
 					},
 				},
 				Logger
@@ -1368,7 +1368,7 @@
 			this._startNewDayWatchDog();
 
 			// start receiving updates
-			this.webSocketSubscriber.start();
+			this.wsPubSub.start();
 		}
 	}
 
